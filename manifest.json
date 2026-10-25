@@ -1,0 +1,10 @@
+{
+  "id": "ctz-today-sidebar",
+  "name": "Today Sidebar",
+  "version": "0.23.1",
+  "minAppVersion": "1.8.7",
+  "description": "A minimal sidebar for daily notes and configurable file shortcuts.",
+  "author": "Chartreuse310",
+  "authorUrl": "https://github.com/Chartreuse310",
+  "isDesktopOnly": false
+}

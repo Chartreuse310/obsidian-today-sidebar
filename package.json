@@ -1,0 +1,22 @@
+{
+  "name": "obsidian-today-sidebar",
+  "version": "0.23.1",
+  "private": true,
+  "description": "Native Obsidian sidebar for Today and configurable file shortcuts",
+  "author": "Chartreuse310",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "test": "node --test main.test.cjs alignment.test.cjs package.test.cjs",
+    "test:unit": "node --test main.test.cjs package.test.cjs",
+    "test:ui": "node --test alignment.test.cjs",
+    "package": "node scripts/package.mjs",
+    "version": "node scripts/version-bump.mjs"
+  },
+  "devDependencies": {
+    "moment": "2.30.1",
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

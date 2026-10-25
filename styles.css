@@ -1,0 +1,429 @@
+/*
+ * Today Sidebar — Copyright (c) 2026 Chartreuse310
+ * SPDX-License-Identifier: GPL-3.0-only
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 3 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+.ctz-today-sidebar.view-content {
+  padding: var(--size-4-2, 8px);
+}
+.ctz-today-sidebar .ctz-today-sidebar__row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--size-4-2, 8px);
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: var(--nav-item-padding, 4px 8px);
+  margin-bottom: var(--nav-item-margin-bottom, 2px);
+  border: 0;
+  border-radius: var(--nav-item-radius, var(--radius-s, 4px));
+  box-shadow: none;
+  background: transparent;
+  color: var(--nav-item-color, var(--text-muted));
+  font: inherit;
+  font-size: var(--nav-item-size, 13px);
+  line-height: var(--line-height-tight, 1.3);
+  font-weight: var(--nav-item-weight, inherit);
+  text-align: left;
+  cursor: pointer;
+}
+.ctz-today-sidebar .ctz-today-sidebar__row:hover {
+  background: var(--nav-item-background-hover, var(--background-modifier-hover));
+  color: var(--nav-item-color-hover, var(--text-normal));
+  font-weight: var(--nav-item-weight-hover, inherit);
+}
+.ctz-today-sidebar .ctz-today-sidebar__row:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon {
+  display: flex;
+  color: inherit;
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon svg {
+  width: 16px;
+  height: 16px;
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon[data-pie="true"] circle {
+  fill: none;
+  stroke-width: 2;
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon[data-pie="true"] circle[data-part="track"] {
+  stroke: var(--background-modifier-border);
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon[data-pie="true"] circle[data-part="value"] {
+  stroke: currentColor;
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon[data-pie="true"][data-complete="true"] path[data-part="check"] {
+  stroke: var(--text-faint, var(--text-muted));
+}
+.ctz-today-sidebar .ctz-today-sidebar__icon[data-pie="true"] path[data-part="check"] {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ctz-today-sidebar .ctz-today-sidebar__row[aria-current="page"],
+.ctz-today-sidebar .ctz-today-sidebar__row[aria-current="page"]:hover {
+  background: var(--nav-item-background-active, var(--background-modifier-hover));
+  color: var(--nav-item-color-active, var(--text-normal));
+  font-weight: var(--nav-item-weight-active, inherit);
+}
+
+.ctz-today-sidebar .ctz-today-sidebar__label,
+.ctz-today-sidebar .ctz-today-sidebar__icon {
+  flex-shrink: 0;
+}
+.ctz-today-sidebar .ctz-today-sidebar__date {
+  color: inherit;
+  font-size: inherit;
+  opacity: 0.5;
+  margin-left: auto;
+  text-align: right;
+  font-weight: inherit;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ctz-today-sidebar .ctz-today-sidebar__date[hidden] {
+  display: none;
+}
+
+.ctz-today-sidebar .ctz-today-sidebar__row:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.ctz-today-sidebar .ctz-today-sidebar__row:disabled:hover {
+  background: transparent;
+}
+.ctz-today-sidebar .ctz-today-sidebar__row[hidden],
+.ctz-today-sidebar .ctz-today-sidebar__separator[hidden] {
+  display: none;
+}
+.ctz-today-sidebar .ctz-today-sidebar__custom-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 65%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctz-today-sidebar__suggest-icon,
+.ctz-today-sidebar__icon-preview {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.ctz-today-sidebar__suggest-icon svg,
+.ctz-today-sidebar__icon-preview svg {
+  width: 16px;
+  height: 16px;
+}
+.ctz-today-sidebar__icon-preview {
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--input-height, 30px);
+  height: var(--input-height, 30px);
+  padding: var(--size-4-1, 4px);
+  margin-right: 0;
+}
+
+.ctz-today-sidebar__manager {
+  display: grid;
+  grid-template-columns: minmax(180px, 320px) minmax(0, 1fr);
+  gap: var(--size-4-4, 16px);
+}
+.ctz-today-sidebar__manager-list-pane,
+.ctz-today-sidebar__manager-editor {
+  min-width: 0;
+}
+.ctz-today-sidebar__manager-list-pane {
+  --ctz-visibility-size: 28px;
+  --ctz-visibility-gap: var(--size-4-2, 8px);
+}
+.ctz-today-sidebar__manager-list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--size-4-2, 8px);
+}
+.ctz-today-sidebar__manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2, 8px);
+  justify-content: flex-end;
+  padding-inline-start: var(--size-4-2, 8px);
+  padding-inline-end: var(--size-4-2, 8px);
+  margin-top: var(--size-4-3, 12px);
+}
+.ctz-today-sidebar__manager-order {
+  display: flex;
+  gap: var(--size-4-1, 4px);
+  margin-inline-end: auto;
+}
+.ctz-today-sidebar__manager-order button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ctz-today-sidebar__manager-danger {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--size-4-2, 8px);
+  margin-top: var(--size-4-6, 24px);
+  padding-top: var(--size-4-4, 16px);
+  border-top: 1px solid var(--background-modifier-border);
+}
+.ctz-today-sidebar__manager-danger .ctz-today-sidebar__delete-button {
+  background-color: var(--background-secondary);
+  color: var(--text-error);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+}
+.ctz-today-sidebar__manager-danger .ctz-today-sidebar__delete-button:hover,
+.ctz-today-sidebar__manager-danger .ctz-today-sidebar__delete-button:focus-visible {
+  background-color: var(--text-error);
+  border-color: var(--text-error);
+  color: var(--text-on-accent);
+}
+.ctz-today-sidebar__manager-entry {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) var(--ctz-visibility-size);
+  position: relative;
+  gap: var(--ctz-visibility-gap);
+}
+.ctz-today-sidebar__manager-entry > :is(.ctz-today-sidebar__visibility, .ctz-today-sidebar__drag-handle) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  margin-bottom: var(--nav-item-margin-bottom, 2px);
+  border: 0;
+  border-radius: var(--nav-item-radius, 4px);
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+}
+.ctz-today-sidebar__manager-entry > :is(.ctz-today-sidebar__visibility, .ctz-today-sidebar__drag-handle):active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+.ctz-today-sidebar__manager-entry > :is(.ctz-today-sidebar__visibility, .ctz-today-sidebar__drag-handle):hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+.ctz-today-sidebar__manager-entry > :is(.ctz-today-sidebar__visibility, .ctz-today-sidebar__drag-handle):focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+.ctz-today-sidebar__visibility svg,
+.ctz-today-sidebar__drag-handle svg {
+  width: 16px;
+  height: 16px;
+}
+.ctz-today-sidebar__manager-list .ctz-today-sidebar__row[data-hidden="true"] {
+  opacity: 0.4;
+}
+.ctz-today-sidebar__manager-editor .setting-item,
+.ctz-today-sidebar__manager-editor .setting-item-control {
+  flex-wrap: wrap;
+  gap: var(--size-4-2, 8px);
+  min-width: 0;
+}
+.ctz-today-sidebar__manager-editor input[type="text"] {
+  max-width: 100%;
+}
+.ctz-today-sidebar__manager-editor .ctz-today-sidebar__file-address {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ctz-today-sidebar__file-address .setting-item-control,
+.ctz-today-sidebar__file-address input[type="text"] {
+  width: 100%;
+}
+.ctz-today-sidebar__file-address input[type="text"] {
+  box-sizing: border-box;
+}
+@media (max-width: 700px) {
+  .ctz-today-sidebar__manager {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ctz-today-sidebar__manager-list {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+}
+
+.ctz-today-sidebar__manager-list .ctz-today-sidebar__row[data-unavailable="true"] {
+  opacity: 0.5;
+}
+
+.ctz-today-sidebar__drag-handle {
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.ctz-today-sidebar__manager-list[data-dragging="true"] {
+  user-select: none;
+}
+.ctz-today-sidebar__manager-list[data-dragging="true"] .ctz-today-sidebar__drag-handle {
+  cursor: grabbing;
+}
+.ctz-today-sidebar__manager-entry[data-drag-source="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+.ctz-today-sidebar__manager-list[data-dragging="true"] > .ctz-today-sidebar__manager-entry:not([data-drag-source]) {
+  transition: transform 120ms ease;
+}
+.ctz-today-sidebar__drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  display: block;
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+  border-radius: var(--nav-item-radius, 4px);
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctz-today-sidebar__manager-list[data-dragging="true"] > .ctz-today-sidebar__manager-entry {
+    transition: none;
+  }
+}
+
+.ctz-today-sidebar__drag-label,
+.ctz-today-sidebar__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ctz-today-sidebar__separator {
+  display: flex;
+  align-items: center;
+  height: var(--size-4-4, 16px);
+  margin-bottom: var(--nav-item-margin-bottom, 2px);
+  padding-inline: var(--size-4-2, 8px);
+  pointer-events: none;
+}
+.ctz-today-sidebar__separator::before {
+  content: '';
+  width: 100%;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.ctz-today-sidebar__separator[data-style="dashed"]::before {
+  border-top-style: dashed;
+}
+.ctz-today-sidebar__separator[data-style="space"]::before {
+  content: none;
+}
+.ctz-today-sidebar .ctz-today-sidebar__row.ctz-today-sidebar__separator-preview {
+  display: block;
+  padding: 0;
+}
+.ctz-today-sidebar__separator-preview > .ctz-today-sidebar__separator {
+  margin-bottom: 0;
+}
+
+.ctz-today-sidebar__manager-editor .setting-item[hidden] {
+  display: none;
+}
+
+.ctz-today-sidebar__property-value {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.ctz-today-sidebar__manager-editor .ctz-today-sidebar__property-setting {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ctz-today-sidebar__property-setting .setting-item-control {
+  justify-content: flex-start;
+  width: 100%;
+}
+.ctz-today-sidebar__property-setting select {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.ctz-today-sidebar__property-setting .ctz-today-sidebar__property-value {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ctz-today-sidebar__manager-editor .ctz-today-sidebar__section-heading {
+  margin: var(--size-4-6, 24px) 0 var(--size-4-2, 8px);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold, 600);
+}
+.ctz-today-sidebar__manager-editor .ctz-today-sidebar__section-heading:first-child {
+  margin-top: 0;
+}
+
+.ctz-today-sidebar__preset-pane {
+  margin-top: var(--size-4-6, 24px);
+  padding: var(--size-4-2, 8px);
+  border-top: 1px solid var(--background-modifier-border);
+}
+.ctz-today-sidebar__preset-pane h3 {
+  font-size: var(--font-ui-medium);
+  margin: var(--size-4-2, 8px) 0;
+}
+.ctz-today-sidebar__preset-list {
+  display: flex;
+  flex-direction: column;
+}
+.ctz-today-sidebar__preset-list .ctz-today-sidebar__row {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ctz-today-sidebar__preset-entry {
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.ctz-today-sidebar__short-title-warning {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-warning);
+}
+.ctz-today-sidebar__short-title-warning svg {
+  width: 16px;
+  height: 16px;
+}
+.ctz-today-sidebar__short-title-warning[hidden] {
+  display: none;
+}

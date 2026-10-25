@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+
+# Local development records are not part of public releases.
+.migration-*/
+AGENTS.md
+todo.md
+docs/public-release-review.md
