@@ -9,7 +9,7 @@ Keep today's daily note and frequently used files together in Obsidian's left si
 - Open today's existing daily note using a configurable folder and date format.
 - Add shortcuts to files in your vault, including non-Markdown files. Reuse an open tab in the main editor when possible.
 - Use custom text, file names, or frontmatter properties for titles and subtitles. Shorten long property titles without editing the note.
-- Display a Markdown file's unfinished task count or show completed tasks as a progress ring.
+- Display a Markdown file's unfinished task count or show completed tasks as a progress ring; this works for file shortcuts and for today's daily note.
 - Reorder items by dragging or using move buttons; hide items, add separators, and save reusable presets.
 - Follow Obsidian's theme and interface language: Simplified Chinese for Chinese, English for other languages.
 
@@ -42,7 +42,7 @@ Open **Settings → Today Sidebar** and select the **Today** item.
 
 Set **Daily notes folder** and **Filename date format** to match where you keep your daily notes. The defaults resolve to `00-journal/YYYY-MM-DD.md`, using your device's local date. For example, on October 26, 2026, the target would be `00-journal/2026-10-26.md`. Leave the folder empty to use the vault root; omit `.md` from the date format. A preview shows the resolved path.
 
-The **Subtitle** controls the displayed date separately. Its default is `YYYY-MM-DD ddd`; weekday names are displayed in English. Leave it empty to hide the date.
+**Subtitle display** chooses between the date and today's unfinished task count. The date defaults to `YYYY-MM-DD ddd`, with weekday names in English; clearing the date format hides the subtitle without changing the path. Choosing the task count replaces the date with that number, keeps the date format saved, and restores the date when you switch back.
 
 Today Sidebar opens existing files. If today's note is missing, it shows the expected path so you can create it with your usual daily-note workflow.
 
@@ -56,7 +56,7 @@ For repeated setups, use **Save as preset** on a file or separator. Add a copy f
 
 ## Task counts and progress
 
-For a file shortcut, set **Subtitle display → Unfinished tasks** or **Icon display → Progress ring**. Both options use only the target Markdown file, including nested tasks.
+For a file shortcut or today's daily note, set **Subtitle display → Unfinished tasks** or **Icon display → Progress ring**. Both options use only the target Markdown file, including nested tasks. Today's target is resolved from the date format, so the count and the ring follow the calendar and the current daily note.
 
 Without Tasks settings, unchecked tasks count as unfinished and `x`/`X` tasks as completed. If the vault has Tasks status settings, Todo, In Progress, and On Hold count as unfinished; Done counts as completed. Cancelled, Non-Task, and unknown statuses are excluded. The progress ring shows completed / (unfinished + completed). Tasks query results and global filters are not applied.
 
