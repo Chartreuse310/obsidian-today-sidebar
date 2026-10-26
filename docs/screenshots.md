@@ -2,9 +2,9 @@
 
 [English overview](../README.md) · [中文说明](../README.zh-CN.md)
 
-Captured from the synthetic Today Sidebar Test vault on macOS, Obsidian 1.14.5, using Today Sidebar 0.23.1. Note titles remain as saved when the interface language changes. These are desktop screenshots; mobile acceptance testing is pending.
+Captured from the synthetic Today Sidebar Test vault on macOS, Obsidian 1.14.5, using Today Sidebar 0.23.1. Note titles remain as saved when the interface language changes. These are desktop screenshots. Mobile acceptance testing has also been completed without reported issues.
 
-以下截图来自示例测试库，不含私人笔记。界面语言切换不会改写已保存的条目标题；桌面验收已完成，移动端仍待验收。
+截图来自示例测试库，不含私人笔记。界面语言切换不会改写已保存的条目标题。桌面与移动端验收均已完成，图库展示桌面界面。
 
 ## Sidebar / 侧栏
 

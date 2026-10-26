@@ -13,4 +13,4 @@ Initial public release candidate. Requires Obsidian 1.8.7 or later.
 - Follow Obsidian's interface language in Simplified Chinese or English.
 - Query the active view through the public Obsidian API.
 
-Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile acceptance testing is pending. This candidate has not yet been published to the community directory.
+Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile acceptance testing has also been completed without reported issues. This candidate has not yet been published to the community directory.

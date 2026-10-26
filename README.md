@@ -23,7 +23,7 @@ Keep today's daily note and frequently used files together in Obsidian's left si
 
 Requires **Obsidian 1.8.7 or later**. Current development version: **0.23.1**.
 
-The first public release is being prepared. Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile support is declared in the manifest; mobile acceptance testing is still pending. No other community plugin is required.
+The first public release is being prepared. Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile acceptance testing has also been completed without reported issues. No other community plugin is required.
 
 ## Manual installation
 
