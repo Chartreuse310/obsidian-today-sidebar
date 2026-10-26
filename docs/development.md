@@ -43,3 +43,20 @@ npm run package
 The version hook synchronizes manifest.json and versions.json. Commit the reviewed changes explicitly. A release tag must match the manifest version exactly, without a `v` prefix. Upload main.js, manifest.json, styles.css, and LICENSE; the installation ZIP can be included as an additional download. Do not overwrite published version assets.
 
 Check the plugin manually on desktop and mobile before publishing. Keep personal vaults, settings, local migration records, and development dependencies out of the public source tree.
+
+## Attested releases
+
+The Release workflow in `.github/workflows/release.yml` runs manually from the GitHub default branch. It checks out the triggering commit, installs locked dependencies and Chrome, runs all tests, and packages the plugin. `scripts/prepare-release.mjs` freezes exactly five assets: main.js, manifest.json, styles.css, LICENSE, and ctz-today-sidebar.zip.
+
+The workflow generates GitHub artifact attestations for all five files using the official pinned `actions/attest` action. It uploads a draft Release, downloads the assets again, compares their bytes, and verifies their attestations against this repository, workflow, and source commit before publishing as Latest. The release tag matches the manifest version and points to the workflow commit. No personal signing key is required.
+
+To release, update versions and the versioned changelog, commit the reviewed public source, then select Actions → Release → Run workflow on the default branch. Existing version tags or Releases (including drafts) block reuse. If verification fails, inspect the retained draft and run logs; the workflow never overwrites published assets. Re-running after a failed draft requires an explicit maintenance decision.
+
+Users can verify downloaded assets with:
+
+```sh
+gh attestation verify main.js --repo Chartreuse310/obsidian-today-sidebar
+gh attestation verify styles.css --repo Chartreuse310/obsidian-today-sidebar
+```
+
+The first workflow release is 0.23.3. Existing 0.23.2 assets are unchanged. Attestations do not modify the runtime files or plugin settings.

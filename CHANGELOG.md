@@ -4,6 +4,8 @@
 
 - Replace clip-path with rectangular clipping for visually hidden navigation and drag labels, preserving accessible names and avoiding the css-clip-path compatibility warning.
 - Requires Obsidian 1.8.7 or later. All 136 automated tests passed.
+- Add a manually triggered GitHub Actions release workflow with provenance attestations and download verification for all five assets.
+
 
 ## 0.23.2 — 2026-10-26
 

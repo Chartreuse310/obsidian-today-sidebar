@@ -45,3 +45,21 @@ test('package rejects mismatched versions and missing runtime or license files b
   const manifest=JSON.parse(await fs.readFile(path.join(temp,'manifest.json'),'utf8'));metadata.version=manifest.version;await fs.writeFile(path.join(temp,'package.json'),JSON.stringify(metadata));await fs.unlink(path.join(temp,'LICENSE'));await assert.rejects(buildPackage({projectRoot:temp}),/ENOENT/);await fs.copyFile(path.join(__dirname,'LICENSE'),path.join(temp,'LICENSE'));await fs.unlink(path.join(temp,'styles.css'));await assert.rejects(buildPackage({projectRoot:temp}),/ENOENT/);await assert.rejects(fs.access(path.join(temp,'dist','ctz-today-sidebar.zip')));
  }finally{await fs.rm(temp,{recursive:true,force:true});}
 });
+test('release preparation freezes five exact assets, requires matching metadata and refuses overwrites',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'today-release-test-'));
+ try{
+  for(const name of ['manifest.json','package.json','package-lock.json','versions.json','CHANGELOG.md','main.js','styles.css','LICENSE'])await fs.copyFile(path.join(__dirname,name),path.join(root,name));
+  const {buildPackage}=await import('./scripts/package.mjs');await buildPackage({projectRoot:root});
+  const {prepareRelease}=await import('./scripts/prepare-release.mjs');
+  const result=await prepareRelease({projectRoot:root});
+  assert.equal(result.version,JSON.parse(await fs.readFile(path.join(root,'manifest.json'),'utf8')).version);
+  assert.deepEqual((await fs.readdir(result.frozen)).sort(),['LICENSE','ctz-today-sidebar.zip','main.js','manifest.json','styles.css']);
+  for(const name of ['main.js','styles.css','manifest.json','LICENSE'])assert.deepEqual(await fs.readFile(path.join(result.frozen,name)),await fs.readFile(path.join(root,name)));
+  assert.deepEqual(await fs.readFile(path.join(result.frozen,'ctz-today-sidebar.zip')),await fs.readFile(path.join(root,'dist/ctz-today-sidebar.zip')));
+  assert.match(await fs.readFile(path.join(root,'dist/release-notes.md'),'utf8'),/GitHub artifact attestations/);
+  await assert.rejects(prepareRelease({projectRoot:root}),/EEXIST/);
+  const lock=JSON.parse(await fs.readFile(path.join(root,'package-lock.json'),'utf8'));lock.version='0.0.0';await fs.writeFile(path.join(root,'package-lock.json'),JSON.stringify(lock));
+  await assert.rejects(prepareRelease({projectRoot:root,outDir:path.join(root,'bad')}),/metadata mismatch/);
+  await assert.rejects(fs.access(path.join(root,'bad')));
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});
