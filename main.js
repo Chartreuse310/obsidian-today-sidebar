@@ -510,7 +510,9 @@ class TodayView extends ItemView {
   async onOpen() {
     this.contentEl.empty();
     this.contentEl.addClass('ctz-today-sidebar');
-    const nav = this.contentEl.createEl('nav', {attr: {'aria-label': t("文件导航")}});
+    const labelId = 'ctz-today-sidebar-nav-' + newButtonId();
+    const nav = this.contentEl.createEl('nav', {attr: {'aria-labelledby': labelId}});
+    this.contentEl.createSpan({text: t("文件导航"), cls: 'ctz-today-sidebar__sr-only', attr: {id: labelId}});
     this.nav = nav;
     this.customRows = new Map();
     this.separatorRows = new Map();

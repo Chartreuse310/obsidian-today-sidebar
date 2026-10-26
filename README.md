@@ -21,16 +21,16 @@ Keep today's daily note and frequently used files together in Obsidian's left si
 
 ## Requirements and availability
 
-Requires **Obsidian 1.8.7 or later**. Current development version: **0.23.1**.
+Requires **Obsidian 1.8.7 or later**. Latest release: [**0.23.2**](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.2).
 
-The first public release is being prepared. Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile acceptance testing has also been completed without reported issues. No other community plugin is required.
+Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile acceptance testing has also been completed without reported issues. No other community plugin is required.
 
 ## Manual installation
 
-Use these three files from this repository: [main.js](main.js), [manifest.json](manifest.json), and [styles.css](styles.css), together with [LICENSE](LICENSE).
+Download [ctz-today-sidebar.zip](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/download/0.23.2/ctz-today-sidebar.zip) from the [0.23.2 release](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.2). The ZIP contains the runtime files and LICENSE. Community directory submission is the next step; use manual installation for now.
 
-1. Create a `ctz-today-sidebar` folder inside your vault's plugin directory, normally `.obsidian/plugins/`.
-2. Copy the three runtime files and LICENSE directly into that folder. The result should include `.obsidian/plugins/ctz-today-sidebar/main.js`.
+1. Unzip the download to get the `ctz-today-sidebar` folder.
+2. Move that entire folder into your vault's plugin directory, normally `.obsidian/plugins/`. The result should include `.obsidian/plugins/ctz-today-sidebar/main.js`.
 3. Open Obsidian's **Settings → Community plugins** and enable **Today Sidebar**. If it is not listed yet, restart Obsidian and check again.
 4. Select the calendar tab in the left sidebar, or run **Today Sidebar: Show sidebar** from the command palette.
 

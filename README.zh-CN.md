@@ -21,16 +21,16 @@
 
 ## 环境与发布状态
 
-需要 **Obsidian 1.8.7 或更新版本**，当前开发版本为 **0.23.1**。
+需要 **Obsidian 1.8.7 或更新版本**，当前发布版本为 [**0.23.2**](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.2)。
 
-首次公开发布正在准备中。桌面端已在 macOS、Obsidian 1.14.5 上完成验收；移动端也已完成验收，未发现问题。基本功能不需要安装其他第三方插件。
+桌面端已在 macOS、Obsidian 1.14.5 上完成验收；移动端也已完成验收，未发现问题。基本功能不需要安装其他第三方插件。
 
 ## 手动安装
 
-使用本仓库中的 [main.js](main.js)、[manifest.json](manifest.json) 和 [styles.css](styles.css) 三个运行文件，以及 [LICENSE](LICENSE)。
+从 [0.23.2 发布页](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.2)下载 [ctz-today-sidebar.zip](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/download/0.23.2/ctz-today-sidebar.zip)，其中包含运行文件和 LICENSE。官方目录提交是下一步，目前请手动安装。
 
-1. 在库的插件目录（通常为 `.obsidian/plugins/`）中创建 `ctz-today-sidebar` 文件夹。
-2. 将三个运行文件和 LICENSE 直接放入其中，路径应类似 `.obsidian/plugins/ctz-today-sidebar/main.js`。
+1. 解压下载的 ZIP，得到 `ctz-today-sidebar` 文件夹。
+2. 将整个文件夹放入库的插件目录（通常为 `.obsidian/plugins/`），路径应类似 `.obsidian/plugins/ctz-today-sidebar/main.js`。
 3. 打开 Obsidian **设置 → 第三方插件**，启用 **Today Sidebar**。如果尚未列出，重启 Obsidian 后再次查看。
 4. 选择左侧栏的日历标签，或在命令面板执行 **Today Sidebar: 显示边栏**。
 

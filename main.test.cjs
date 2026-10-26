@@ -1009,3 +1009,17 @@ test('navigation resolves the public active view without reading deprecated acti
  active=new t.FileView(new t.TFile('other.md'));assert.equal(plugin.navigationView(),active);
  assert.equal(calls,5);
 });
+
+test('navigation keeps its localized accessible name without the aria-label tooltip trigger',async()=>{
+ for(const language of ['zh','en']){
+  const t=harness({language}),plugin=new t.Plugin();await plugin.onload();
+  const views=[];
+  for(let index=0;index<2;index++){
+   const view=t.factories.get(t.h.VIEW_TYPE)({});await view.onOpen();views.push(view);
+   const [nav,label]=view.contentEl.children;
+   assert.equal(nav.attrs['aria-label'],undefined);assert.equal(nav.attrs.title,undefined);assert.equal(nav.title,undefined);
+   assert.equal(nav.attrs['aria-labelledby'],label.attrs.id);assert.equal(label.textContent,language==='zh'?'文件导航':'File navigation');assert.equal(label.cls,'ctz-today-sidebar__sr-only');
+  }
+  assert.notEqual(views[0].nav.attrs['aria-labelledby'],views[1].nav.attrs['aria-labelledby']);
+ }
+});
