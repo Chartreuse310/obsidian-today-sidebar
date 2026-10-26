@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.3 — 2026-10-26
+
+- Replace clip-path with rectangular clipping for visually hidden navigation and drag labels, preserving accessible names and avoiding the css-clip-path compatibility warning.
+- Requires Obsidian 1.8.7 or later. All 136 automated tests passed.
+
 ## 0.23.2 — 2026-10-26
 
 Initial public release. Requires Obsidian 1.8.7 or later. Licensed under GPL-3.0-only.
