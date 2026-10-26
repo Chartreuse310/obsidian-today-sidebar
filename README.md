@@ -13,11 +13,17 @@ Keep today's daily note and frequently used files together in Obsidian's left si
 - Reorder items by dragging or using move buttons; hide items, add separators, and save reusable presets.
 - Follow Obsidian's theme and interface language: Simplified Chinese for Chinese, English for other languages.
 
+## Screenshots
+
+![Sidebar management in English, light theme](docs/images/settings-en-light.png)
+
+[View the sidebar and settings in both languages and themes](docs/screenshots.md).
+
 ## Requirements and availability
 
 Requires **Obsidian 1.8.7 or later**. Current development version: **0.23.1**.
 
-The first public release is being prepared. Desktop and mobile support are declared in the plugin manifest; real-app acceptance testing on both platforms is still pending. No other community plugin is required.
+The first public release is being prepared. Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile support is declared in the manifest; mobile acceptance testing is still pending. No other community plugin is required.
 
 ## Manual installation
 
