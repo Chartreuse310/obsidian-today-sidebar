@@ -24,6 +24,22 @@ The ZIP is generated in `dist/ctz-today-sidebar.zip` and contains the three runt
 
 Moment is loaded from the development dependencies. `TODAY_TEST_MOMENT` can point to an alternative CommonJS file; the test harness also supports extracting the bundled version from a local macOS Obsidian installation. `WORKBENCH_NODE_MODULES` can select an alternative Playwright dependency directory. These are test-only options.
 
+## Branches and contributions
+
+The local `main` branch tracks `origin/main` and uses the same public history. Before starting work, synchronize a clean working tree and create a feature branch:
+
+```sh
+git switch main
+git pull --ff-only
+git switch -c codex/describe-the-change
+```
+
+Open a pull request against `main`. The Checks workflow runs the full test suite and packaging on pull requests and pushes to `main`. Review the changes and check the results before merging; squash merging keeps each contribution in one commit. After merging on GitHub, switch to a clean local `main` and run `git pull --ff-only`. Do not cherry-pick the same change into `main` beforehand.
+
+Keep local `main` free of unpushed development commits when merging on GitHub. If fast-forward synchronization fails, inspect the divergence instead of force-pushing or resetting local work. Use a GitHub noreply address for your own commits and preserve contributor attribution. Private historical archives and local development records must stay outside the public history; do not merge or push them. Stage reviewed paths explicitly and push only the intended branch.
+
+Merging a pull request does not publish a plugin release. The Release workflow remains a separate manual action.
+
 ## Runtime boundaries
 
 Normal vault file lookup and metadata use public Obsidian APIs. Settings use `Plugin.loadData()` and `Plugin.saveData()`. The plugin does not edit note contents or create missing daily notes.
@@ -33,6 +49,8 @@ The optional Custom Icons integration uses a non-public plugin lookup, guarded b
 ## Versioning and release assets
 
 Keep the plugin id `ctz-today-sidebar` and existing settings compatible. Feature changes use a minor version and compatible fixes a patch version. Documentation-only changes do not change the runtime version.
+
+The current source version is 0.24.0, prepared for release. The latest published release is [0.23.3](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.3); a version bump or merge alone does not publish a release.
 
 ```sh
 npm version patch --no-git-tag-version

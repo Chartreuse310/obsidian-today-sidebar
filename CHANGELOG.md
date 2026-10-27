@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.24.0 — 2026-10-27
 
 - Let today's daily note choose its subtitle between the displayed date and the unfinished task count, and use the progress ring in place of its icon.
 - Keep the saved date format while the daily note shows a task count, so switching back to the date restores it.
