@@ -58,6 +58,9 @@ const COPY = Object.freeze({
   "副标题": ["副标题", "Subtitle"],
   "副标题属性名": ["副标题属性名", "Subtitle property"],
   "副标题显示": ["副标题显示", "Subtitle display"],
+  "日期": ["日期", "Date"],
+  "显示按日期格式生成的日期；可改为当天日记的未完成任务数。": ["显示按日期格式生成的日期；可改为当天日记的未完成任务数。", "Show the date generated from the date format, or switch to the unfinished task count of today's note."],
+  "隐藏副标题，日期格式会保留。": ["隐藏副标题，日期格式会保留。", "Hide the subtitle and keep the date format."],
   "单线": ["单线", "Solid line"],
   "可改为目标 Markdown 文件的未完成任务数；使用当前库 Tasks 状态配置，未配置时使用标准任务状态。": ["可改为目标笔记的未完成任务数；使用当前库 Tasks 插件的状态配置，未配置时使用标准任务状态。", "Optionally display the unfinished task count for the target Markdown file. Use this vault's Tasks status settings, or standard task statuses when none are configured."],
   "图标": ["图标", "Icon"],
@@ -152,7 +155,9 @@ function loadButton(data, usedIds = new Set(), type = 'file') {
   usedIds.add(id);
   if (type === 'separator') return {id, type, hidden: data?.hidden === true, separatorStyle: Object.hasOwn(SEPARATOR_STYLES, data?.separatorStyle) ? data.separatorStyle : 'solid'};
   const defaults = type === 'today' ? {...DEFAULTS, customTitle: '', customIcon: 'calendar-days'} : DEFAULTS;
-  return {id, type, hidden: data?.hidden === true, ...(type === 'file' ? {titleShorteningEnabled: data?.titleShorteningEnabled === true, titleShortName: typeof data?.titleShortName === 'string' ? data.titleShortName : '', subtitleMode: ['none', 'tasks', 'filename', 'frontmatter'].includes(data?.subtitleMode) ? data.subtitleMode : 'text', iconMode: ['icon', 'tasks'].includes(data?.iconMode) ? data.iconMode : 'icon', titleMode: ['filename', 'frontmatter'].includes(data?.titleMode) ? data.titleMode : 'text', titleProperty: typeof data?.titleProperty === 'string' ? data.titleProperty : '', subtitleProperty: typeof data?.subtitleProperty === 'string' ? data.subtitleProperty : ''} : {}), ...Object.fromEntries(BUTTON_FIELDS.map(key => [key, typeof data?.[key] === 'string' ? data[key] : defaults[key]]))};
+  // Today has no file to name and no property to read: its subtitle is the date, the task count or nothing.
+  const subtitleModes = type === 'file' ? ['none', 'text', 'tasks', 'filename', 'frontmatter'] : ['none', 'text', 'tasks'];
+  return {id, type, hidden: data?.hidden === true, subtitleMode: subtitleModes.includes(data?.subtitleMode) ? data.subtitleMode : 'text', iconMode: ['icon', 'tasks'].includes(data?.iconMode) ? data.iconMode : 'icon', ...(type === 'file' ? {titleShorteningEnabled: data?.titleShorteningEnabled === true, titleShortName: typeof data?.titleShortName === 'string' ? data.titleShortName : '', titleMode: ['filename', 'frontmatter'].includes(data?.titleMode) ? data.titleMode : 'text', titleProperty: typeof data?.titleProperty === 'string' ? data.titleProperty : '', subtitleProperty: typeof data?.subtitleProperty === 'string' ? data.subtitleProperty : ''} : {}), ...Object.fromEntries(BUTTON_FIELDS.map(key => [key, typeof data?.[key] === 'string' ? data[key] : defaults[key]]))};
 }
 
 function loadSettings(data) {
@@ -211,6 +216,22 @@ function customInfo(settings, vault) {
   const filename = fileBaseName(file?.path || path);
   return {path, file, title: settings.customTitle.trim() || filename || t("自定义"), subtitle: settings.customSubtitle.trim()};
 }
+// Today's target moves with the calendar, so it is resolved at render time rather than from storage.
+function dailyInfo(plugin, settings, date = new Date()) {
+  const path = dailyPath(settings, date);
+  const candidate = plugin.app.vault.getAbstractFileByPath(path);
+  return {path, file: candidate instanceof TFile ? candidate : null};
+}
+// One resolver for sidebar targets: File buttons use a saved path, Today uses its folder and date format.
+function entryInfo(plugin, button, daily = plugin.settings, date = new Date()) {
+  return button.type === 'today' ? dailyInfo(plugin, daily, date) : customInfo(button, plugin.app.vault);
+}
+// A saved path may omit .md, so both spellings can name the same target.
+function pathVariants(path) {
+  const value = normalizePath(path || '');
+  if (!value) return [];
+  return /\.md$/i.test(value) ? [value] : [value, value + '.md'];
+}
 function fileBaseName(path) {
   return (path || '').split('/').pop().replace(/\.md$/i, '');
 }
@@ -265,22 +286,26 @@ class TaskCounter {
     this.dirty = new Set();
     this.beginRender();
   }
-  enabledButtons() {
-    const presets = this.plugin.settingsTab?.refreshListControls ? this.plugin.settings.presets.map(item => item.button) : [];
-    return [...this.plugin.settings.buttons, ...presets].filter(button => button.type === 'file' && (button.subtitleMode === 'tasks' || button.iconMode === 'tasks'));
+  // Every rendered entry that needs task data, paired with the daily settings that place it.
+  entries() {
+    const list = this.plugin.settings.buttons.map(button => ({button, daily: this.plugin.settings}));
+    if (this.plugin.settingsTab?.refreshListControls) for (const preset of this.plugin.settings.presets) list.push({button: preset.button, daily: preset});
+    return list.filter(({button}) => button.type !== 'separator' && (button.subtitleMode === 'tasks' || button.iconMode === 'tasks'));
   }
   beginRender() { this.reads = new Map(); }
   isTargetPath(path) {
     if (this.counts.has(path)) return true;
-    return this.enabledButtons().some(button => {
-      const value = button.customPath.trim();
-      return value && (path === normalizePath(value) || path === normalizePath(value + '.md'));
-    });
+    const target = normalizePath(path);
+    for (const entry of this.entries()) {
+      try { if (pathVariants(entryInfo(this.plugin, entry.button, entry.daily).path).includes(target)) return true; }
+      catch { /* Invalid targets have no path. */ }
+    }
+    return false;
   }
   prune() {
     const paths = new Set();
-    for (const button of this.enabledButtons()) {
-      try { const file = customInfo(button, this.plugin.app.vault).file; if (file) paths.add(file.path); } catch { /* Invalid targets are unavailable. */ }
+    for (const entry of this.entries()) {
+      try { const file = entryInfo(this.plugin, entry.button, entry.daily).file; if (file) paths.add(file.path); } catch { /* Invalid targets are unavailable. */ }
     }
     for (const path of this.counts.keys()) if (!paths.has(path)) this.counts.delete(path);
     for (const path of this.dirty) if (!paths.has(path)) this.dirty.delete(path);
@@ -316,7 +341,7 @@ class TaskCounter {
     return stats?.total ? {done: stats.done, total: stats.total} : null;
   }
   reloadStatuses() {
-    if (this.plugin.disposed || !this.enabledButtons().length) return Promise.resolve();
+    if (this.plugin.disposed || !this.entries().length) return Promise.resolve();
     if (this.pending) return this.pending;
     this.pending = (async () => {
       let types, description, error = null;
@@ -385,7 +410,7 @@ function progressLabel(done, total) {
 // A pie replaces the File icon only with ready data and at least one task;
 // missing, pending and empty states keep the configured icon visible.
 function drawEntryIcon(plugin, el, button, info) {
-  const stats = button.type === 'file' && button.iconMode === 'tasks' ? plugin.taskCounter.progress(info?.file) : null;
+  const stats = button.iconMode === 'tasks' ? plugin.taskCounter.progress(info?.file) : null;
   if (!stats) {
     el.removeAttribute('data-pie');
     el.removeAttribute('data-complete');
@@ -536,15 +561,16 @@ class TodayView extends ItemView {
       }
       this.row.hidden = today.hidden;
       this.todayLabel.textContent = this.todayLabel.title = today.customTitle.trim() || t('Today 类型');
-      drawIcon(this.plugin.app, this.todayIcon, today.customIcon);
       const now = new Date();
-      const date = displayDate(this.plugin.settings, now);
-      this.dateLabel.textContent = date;
-      this.dateLabel.title = date;
-      this.dateLabel.hidden = !date;
-      let active = false;
-      try { active = view instanceof FileView && view.file instanceof TFile && view.file.path === dailyPath(this.plugin.settings, now); }
+      let todayInfo = null;
+      try { todayInfo = entryInfo(this.plugin, today, this.plugin.settings, now); }
       catch { /* Invalid settings have no selected target. */ }
+      const date = this.plugin.entrySubtitle(today, todayInfo, this.plugin.settings, now);
+      this.dateLabel.textContent = date;
+      this.dateLabel.title = today.subtitleMode === 'tasks' ? t('unfinishedHint', {count: date, description: this.plugin.taskCounter.description}) : date;
+      this.dateLabel.hidden = !date;
+      drawEntryIcon(this.plugin, this.todayIcon, today, todayInfo);
+      const active = view instanceof FileView && view.file instanceof TFile && Boolean(todayInfo?.path) && view.file.path === todayInfo.path;
       if (active) this.row.setAttribute('aria-current', 'page');
       else this.row.removeAttribute('aria-current');
     } else if (this.row) {
@@ -867,7 +893,10 @@ class TodaySettings extends PluginSettingTab {
     let refreshTitleShortening = () => {};
     this.refreshListControls = () => {
       this.plugin.taskCounter.beginRender();
-      if (this.taskModeSetting) this.taskModeSetting.setDesc(selected?.subtitleMode === 'none' ? t("不显示副标题，原有文本会保留。") : selected?.subtitleMode === 'tasks' ? this.plugin.taskCounter.description + t(" 无任务显示 0，无法统计显示 —，等待缓存显示 …。") : selected?.subtitleMode === 'filename' ? t("显示目标文件名（不含 .md）。") : selected?.subtitleMode === 'frontmatter' ? t("显示指定 frontmatter 属性的值；属性缺失或为空时隐藏。") : t("可改为目标 Markdown 文件的未完成任务数；使用当前库 Tasks 状态配置，未配置时使用标准任务状态。"));
+      if (this.taskModeSetting) {
+        const todayMode = selected?.type === 'today';
+        this.taskModeSetting.setDesc(selected?.subtitleMode === 'none' ? (todayMode ? t("隐藏副标题，日期格式会保留。") : t("不显示副标题，原有文本会保留。")) : selected?.subtitleMode === 'tasks' ? this.plugin.taskCounter.description + t(" 无任务显示 0，无法统计显示 —，等待缓存显示 …。") : selected?.subtitleMode === 'filename' ? t("显示目标文件名（不含 .md）。") : selected?.subtitleMode === 'frontmatter' ? t("显示指定 frontmatter 属性的值；属性缺失或为空时隐藏。") : todayMode ? t("显示按日期格式生成的日期；可改为当天日记的未完成任务数。") : t("可改为目标 Markdown 文件的未完成任务数；使用当前库 Tasks 状态配置，未配置时使用标准任务状态。"));
+      }
       for (const button of this.plugin.settings.buttons) {
         const controls = listControls.get(button.id);
         if (!controls) continue;
@@ -879,10 +908,16 @@ class TodaySettings extends PluginSettingTab {
           controls.label.textContent = title;
         } else {
           title = button.customTitle.trim();
-          let subtitle = button.type === 'today' ? displayDate(this.plugin.settings) : button.subtitleMode === 'none' ? '' : button.customSubtitle.trim();
           let info = null;
-          if (button.type === 'today') title ||= t('Today 类型');
-          else {
+          let subtitle;
+          if (button.type === 'today') {
+            title ||= t('Today 类型');
+            try {
+              info = entryInfo(this.plugin, button, this.plugin.settings);
+              subtitle = this.plugin.entrySubtitle(button, info, this.plugin.settings);
+            } catch { subtitle = button.subtitleMode === 'tasks' ? '—' : ''; }
+          } else {
+            subtitle = button.subtitleMode === 'none' ? '' : button.customSubtitle.trim();
             try {
               info = customInfo(button, this.app.vault);
               title = this.plugin.fileTitle(button, info);
@@ -894,8 +929,7 @@ class TodaySettings extends PluginSettingTab {
           controls.subtitle.textContent = controls.subtitle.title = subtitle;
           controls.subtitle.hidden = !subtitle;
           controls.row.title = title;
-          if (button.type === 'today') drawIcon(this.app, controls.icon, button.customIcon);
-          else drawEntryIcon(this.plugin, controls.icon, button, info);
+          drawEntryIcon(this.plugin, controls.icon, button, info);
         }
         controls.dragLabel.textContent = t('dragItem', {title: title});
         controls.row.disabled = false;
@@ -980,16 +1014,18 @@ class TodaySettings extends PluginSettingTab {
           updateSeparator(controls.separator, item.button.separatorStyle);
           controls.label.textContent = item.name;
         } else {
-          let info, subtitle = item.button.type === 'today' ? displayDate(item) : item.button.customSubtitle;
-          if (item.button.type === 'file') {
+          let info, subtitle = item.button.customSubtitle;
+          if (item.button.type === 'today') {
+            try { info = entryInfo(this.plugin, item.button, item); subtitle = this.plugin.entrySubtitle(item.button, info, item); }
+            catch { subtitle = ''; }
+          } else if (item.button.type === 'file') {
             try { info = customInfo(item.button, this.app.vault); subtitle = this.plugin.fileSubtitle(item.button, info); }
             catch { subtitle = item.button.subtitleMode === 'text' ? item.button.customSubtitle : ''; }
           }
           controls.label.textContent = item.name;
           controls.subtitle.textContent = subtitle;
           controls.subtitle.hidden = !subtitle;
-          if (item.button.type === 'today') drawIcon(this.app, controls.icon, item.button.customIcon);
-          else drawEntryIcon(this.plugin, controls.icon, item.button, info);
+          drawEntryIcon(this.plugin, controls.icon, item.button, info);
         }
       }
     };
@@ -1070,10 +1106,10 @@ class TodaySettings extends PluginSettingTab {
       if (titlePropertySetting) titlePropertySetting.settingEl.hidden = !(selected.type === 'file' && selected.titleMode === 'frontmatter');
     };
     const updateSubtitleEditor = () => {
-      if (subtitleSetting) subtitleSetting.settingEl.hidden = selected.type === 'file' && selected.subtitleMode !== 'text';
+      if (subtitleSetting) subtitleSetting.settingEl.hidden = selected.subtitleMode !== 'text';
       if (subtitlePropertySetting) subtitlePropertySetting.settingEl.hidden = !(selected.type === 'file' && selected.subtitleMode === 'frontmatter');
     };
-    const updateIconEditor = () => { if (iconSetting) iconSetting.settingEl.hidden = selected.type === 'file' && selected.iconMode === 'tasks'; };
+    const updateIconEditor = () => { if (iconSetting) iconSetting.settingEl.hidden = selected.iconMode === 'tasks'; };
     const update = async (key, value, global = false) => {
       if (this.plugin.disposed || !selectedExists()) return;
       if (global) dailySettings[key] = value;
@@ -1142,12 +1178,12 @@ class TodaySettings extends PluginSettingTab {
       }
     }
     sectionHeading(t("副标题"));
-    if (selected.type === 'file') {
-      this.taskModeSetting = new Setting(editor).setName(t("副标题显示")).addDropdown(dropdown => dropdown.addOptions({none: t("不显示"), text: t("普通文本"), tasks: t("未完成任务数"), filename: t("文件名"), frontmatter: t("frontmatter 属性")}).setValue(selected.subtitleMode).onChange(value => {
-        if (!['none', 'text', 'tasks', 'filename', 'frontmatter'].includes(value)) return;
-        return update('subtitleMode', value);
-      }));
-    }
+    // Today reuses the text mode for its date, so the same three choices replace the old fixed date.
+    const subtitleModeOptions = selected.type === 'today' ? {none: t("不显示"), text: t("日期"), tasks: t("未完成任务数")} : {none: t("不显示"), text: t("普通文本"), tasks: t("未完成任务数"), filename: t("文件名"), frontmatter: t("frontmatter 属性")};
+    this.taskModeSetting = new Setting(editor).setName(t("副标题显示")).addDropdown(dropdown => dropdown.addOptions(subtitleModeOptions).setValue(selected.subtitleMode).onChange(value => {
+      if (!Object.hasOwn(subtitleModeOptions, value)) return;
+      return update('subtitleMode', value);
+    }));
     subtitleSetting = new Setting(editor).setName(t("副标题"))
       .setDesc(selected.type === 'today' ? t("日期显示格式，例如 YYYY-MM-DD ddd；留空隐藏，不改变文件地址。") : t("普通文本，留空隐藏；选择其他模式时保留此文本，切回后恢复。"))
       .addText(text => text.setValue(selected.type === 'today' ? dailySettings.displayFormat : selected.customSubtitle)
@@ -1183,12 +1219,12 @@ class TodaySettings extends PluginSettingTab {
           text.setValue(selected.customPath).onChange(value => update('customPath', value));
           this.suggesters.push(new OptionSuggest(this.app, text.inputEl, () => this.app.vault.getFiles().map(file => file.path), value => update('customPath', value)));
         });
-      new Setting(editor).setName(t("图标显示")).setDesc(t("完成度饼图按已完成任务占未完成与已完成任务总数的比例绘制环形，取消任务不计入；无任务或无法统计时回退普通图标，关闭后恢复保存的图标。"))
-        .addDropdown(dropdown => dropdown.addOptions({icon: t("普通图标"), tasks: t("完成度饼图")}).setValue(selected.iconMode).onChange(value => {
-          if (!['icon', 'tasks'].includes(value)) return;
-          return update('iconMode', value);
-        }));
     }
+    new Setting(editor).setName(t("图标显示")).setDesc(t("完成度饼图按已完成任务占未完成与已完成任务总数的比例绘制环形，取消任务不计入；无任务或无法统计时回退普通图标，关闭后恢复保存的图标。"))
+      .addDropdown(dropdown => dropdown.addOptions({icon: t("普通图标"), tasks: t("完成度饼图")}).setValue(selected.iconMode).onChange(value => {
+        if (!['icon', 'tasks'].includes(value)) return;
+        return update('iconMode', value);
+      }));
     iconSetting = new Setting(editor).setName(t("按钮图标")).setDesc(t("输入搜索，或使用 Custom Icons 选择图标。"));
     const iconPreview = iconSetting.controlEl.createEl('button', {cls: 'ctz-today-sidebar__icon-preview', attr: {type: 'button', 'aria-label': t("选择图标")}});
     const refreshIcon = value => { const id = drawIcon(this.app, iconPreview, value); iconPreview.title = t('chooseIconHint', {name: id}); };
@@ -1239,7 +1275,7 @@ class TodaySidebarPlugin extends Plugin {
       if (this.usesFileDisplay(file?.path)) this.refreshTodayStates();
     }));
     this.registerEvent(this.app.metadataCache.on('resolved', () => {
-      if (!this.taskCounter.enabledButtons().length) return;
+      if (!this.taskCounter.entries().length) return;
       this.taskCounter.counts.clear();
       this.taskCounter.dirty.clear();
       this.refreshTodayStates();
@@ -1277,6 +1313,13 @@ class TodaySidebarPlugin extends Plugin {
     if (button.subtitleMode === 'filename') return fileBaseName(info?.file?.path || info?.path);
     if (button.subtitleMode === 'frontmatter') return frontmatterValue(info?.file ? this.app.metadataCache.getFileCache(info.file) : null, button.subtitleProperty) ?? '';
     return info.subtitle;
+  }
+  // Today reuses the text mode for its date format, so it never falls through to a saved subtitle.
+  entrySubtitle(button, info, daily = this.settings, date = new Date()) {
+    if (button.type !== 'today') return this.fileSubtitle(button, info);
+    if (button.subtitleMode === 'none') return '';
+    if (button.subtitleMode === 'tasks') return this.taskCounter.subtitle(info?.file);
+    return displayDate(daily, date);
   }
   // Filename and frontmatter displays depend on the live file, not only on saved settings.
   usesFileDisplay(path) {

@@ -25,10 +25,56 @@ test('task status types count TODO, IN_PROGRESS and ON_HOLD while excluding othe
  assert.equal(h.countUnfinishedTasks(taskItems([' ','/','x','X']),h.taskStatusTypes(null)),1);
  const changed=structuredClone(tasksConfig);changed.statusSettings.customStatuses[0].type='DONE';assert.equal(h.countUnfinishedTasks(taskItems(['/']),h.taskStatusTypes(changed)),0);
 });
-test('task mode migration defaults to text and preserves old subtitles and new per-file modes',()=>{
+test('task mode migration defaults to text and preserves old subtitles and daily-note choices',()=>{
  const {h}=harness(),settings=h.loadSettings({buttons:[{id:'a',type:'file',customSubtitle:'旧文本'},{id:'b',type:'file',subtitleMode:'tasks'},{id:'t',type:'today',subtitleMode:'tasks'}]});
- assert.equal(settings.buttons[0].subtitleMode,'text');assert.equal(settings.buttons[0].customSubtitle,'旧文本');assert.equal(settings.buttons[1].subtitleMode,'tasks');assert.notEqual(settings.buttons[2].subtitleMode,'tasks');
+ assert.equal(settings.buttons[0].subtitleMode,'text');assert.equal(settings.buttons[0].customSubtitle,'旧文本');assert.equal(settings.buttons[1].subtitleMode,'tasks');assert.equal(settings.buttons[2].subtitleMode,'tasks');assert.equal(settings.buttons[2].iconMode,'icon');
  assert.equal(h.loadSettings(settings).buttons[1].subtitleMode,'tasks');
+});
+test('daily note subtitle switches between the date and the unfinished task count',async()=>{
+ const t=harness();t.adapterFiles.set('.obsidian/plugins/obsidian-tasks-plugin/data.json',JSON.stringify(tasksConfig));
+ const plugin=new t.Plugin();plugin.saved={buttons:[{id:'today',type:'today'}]};await plugin.onload();
+ const view=t.factories.get(t.h.VIEW_TYPE)({});await view.onOpen();t.leaves.push({type:t.h.VIEW_TYPE,view});
+ await plugin.taskCounter.reloadStatuses();
+ const today=plugin.settings.buttons.find(button=>button.type==='today');
+ const target=t.h.dailyPath(plugin.settings),note=new t.TFile(target);
+ t.files.set(target,note);t.metadata.set(target,{listItems:taskItems([' ','/','x'])});
+ view.updateActive();
+ assert.equal(view.dateLabel.textContent,t.h.displayDate(plugin.settings),'date mode keeps the current subtitle');
+ assert.equal(view.dateLabel.hidden,false);
+ today.subtitleMode='tasks';await plugin.taskCounter.reloadStatuses();view.updateActive();
+ assert.equal(view.dateLabel.textContent,'2');
+ today.iconMode='tasks';view.updateActive();
+ assert.equal(view.todayIcon.attrs['data-pie'],'true');
+ t.metadata.set(target,{listItems:taskItems(['x','x'])});t.emit('changed',note);
+ assert.equal(view.dateLabel.textContent,'0','today resolves the target again on every render');
+ today.subtitleMode='none';view.updateActive();
+ assert.equal(view.dateLabel.textContent,'');assert.equal(view.dateLabel.hidden,true);
+ today.subtitleMode='text';today.hidden=false;t.files.delete(target);view.updateActive();
+ assert.equal(view.dateLabel.textContent,t.h.displayDate(plugin.settings),'a missing daily note falls back to the date');
+});
+test('Today editor offers only date or unfinished tasks and hides the date format outside date mode',async()=>{
+ const t=harness();const plugin=new t.Plugin();await plugin.onload();const tab=t.tabs[0];tab.display();
+ const mode=editorSetting(tab,'副标题显示').dropdown;
+ assert.deepEqual(JSON.parse(JSON.stringify(mode.options)),{none:'不显示',text:'日期',tasks:'未完成任务数'});
+ assert.equal(editorSetting(tab,'副标题').settingEl.hidden,false);
+ assert.ok(editorSetting(tab,'图标显示'),'Today also offers the completion pie');
+ await mode.change('tasks');
+ assert.equal(plugin.settings.buttons.find(button=>button.type==='today').subtitleMode,'tasks');
+ assert.equal(editorSetting(tab,'副标题').settingEl.hidden,true);
+ assert.equal(tab.listRows.get(plugin.settings.buttons.find(button=>button.type==='today').id).children[2].textContent,'—','the manager preview follows the chosen mode');
+ await mode.change('none');
+ assert.equal(editorSetting(tab,'副标题').settingEl.hidden,true);
+ await mode.change('text');
+ assert.equal(editorSetting(tab,'副标题').settingEl.hidden,false);
+});
+test('a saved Today preset previews the task count of its own folder',async()=>{
+ const t=harness();t.adapterFiles.set('.obsidian/plugins/obsidian-tasks-plugin/data.json',JSON.stringify(tasksConfig));
+ const plugin=new t.Plugin();plugin.saved={buttons:[],presets:[{id:'p',name:'日记模板',button:{type:'today',subtitleMode:'tasks'},folder:'j',dateFormat:'YYYY-MM-DD',displayFormat:'YYYY-MM-DD'}]};
+ await plugin.onload();const tab=t.tabs[0];tab.display();
+ const target=t.h.dailyPath(plugin.settings.presets[0]),note=new t.TFile(target);
+ t.files.set(target,note);t.metadata.set(target,{listItems:taskItems([' ','x'])});
+ await plugin.taskCounter.reloadStatuses();tab.refreshListControls();
+ assert.equal(tab.presetRows.get('p').children[2].textContent,'1','presets read their own folder and date format');
 });
 test('File subtitle modes hide both subtitle and editor while retaining text across reload',async()=>{
  const {plugin,tab,view,h,metadataReads}=await taskFixture();
@@ -95,7 +141,7 @@ test('task stats report unfinished, done and total across status types',()=>{
 test('icon mode migration defaults to icon and preserves saved pie choices',()=>{
  const {h}=harness(),settings=h.loadSettings({buttons:[{id:'a',type:'file',customIcon:'star'},{id:'b',type:'file',iconMode:'tasks'},{id:'c',type:'file',iconMode:'weird'},{id:'t',type:'today',iconMode:'tasks'},{id:'s',type:'separator',iconMode:'tasks'}]});
  assert.equal(settings.buttons[0].iconMode,'icon');assert.equal(settings.buttons[1].iconMode,'tasks');assert.equal(settings.buttons[2].iconMode,'icon');
- assert.notEqual(settings.buttons[3].iconMode,'tasks');assert.equal(settings.buttons[4].iconMode,undefined);
+ assert.equal(settings.buttons[3].iconMode,'tasks');assert.equal(settings.buttons[4].iconMode,undefined);
  assert.equal(h.loadSettings(settings).buttons[1].iconMode,'tasks');
 });
 test('progress pies replace File icons in sidebar and settings, follow task changes and restore the saved icon',async()=>{
@@ -501,7 +547,7 @@ test('manager list matches the sidebar and editor fields belong to four sections
   }
   return result;
  };
- assert.deepEqual(sections(),{'基础':['类型','日记文件夹','文件名日期格式'],'主标题':['主标题'],'副标题':['副标题'],'图标':['按钮图标']});
+ assert.deepEqual(sections(),{'基础':['类型','日记文件夹','文件名日期格式'],'主标题':['主标题'],'副标题':['副标题显示','副标题'],'图标':['图标显示','按钮图标']});
  await editorSetting(tab,'副标题').text.change('');assert.equal(tab.listRows.get(today.id).children[2].hidden,true);
  tab.listRows.get(file.id).click();
  assert.deepEqual(sections(),{'基础':['类型','文件地址'],'主标题':['主标题来源','主标题','标题属性名','使用简称','简称'],'副标题':['副标题显示','副标题','副标题属性名'],'图标':['图标显示','按钮图标']});
@@ -750,7 +796,7 @@ test('Today recomputes local date across midnight without changing settings',asy
  await plugin.openToday();now=new Date(2026,9,24,0,1).valueOf();await plugin.openToday();assert.deepEqual(t.opened,['00-journal/2026-10-23.md','00-journal/2026-10-24.md']);
 });
 test('settings fields persist independently, show path preview and reload',async()=>{
- const t=harness(),plugin=new t.Plugin();await plugin.onload();const tab=t.tabs[0];tab.display();assert.equal(tab.editorEl.settings.length,6);await editorSetting(tab,'日记文件夹').text.change('notes');await editorSetting(tab,'文件名日期格式').text.change('YYYY/MM/DD');assert.equal(plugin.saved.folder,'notes');assert.equal(plugin.saved.dateFormat,'YYYY/MM/DD');const next=new t.Plugin();next.saved=plugin.saved;await next.onload();assert.equal(next.settings.folder,'notes');assert.equal(next.settings.dateFormat,'YYYY/MM/DD');
+ const t=harness(),plugin=new t.Plugin();await plugin.onload();const tab=t.tabs[0];tab.display();assert.equal(tab.editorEl.settings.length,8);await editorSetting(tab,'日记文件夹').text.change('notes');await editorSetting(tab,'文件名日期格式').text.change('YYYY/MM/DD');assert.equal(plugin.saved.folder,'notes');assert.equal(plugin.saved.dateFormat,'YYYY/MM/DD');const next=new t.Plugin();next.saved=plugin.saved;await next.onload();assert.equal(next.settings.folder,'notes');assert.equal(next.settings.dateFormat,'YYYY/MM/DD');
 });
 test('serialized saves retain the newest edit and recover after a rejected save',async()=>{
  const t=harness(),plugin=new t.Plugin();await plugin.onload();let writes=[];plugin.saveData=async data=>{writes.push(data.folder);if(writes.length===1)throw Error('disk error');plugin.saved=data;};plugin.settings.folder='a';const first=plugin.saveSettings();plugin.settings.folder='b';const second=plugin.saveSettings();await assert.rejects(first,/disk error/);await second;assert.deepEqual(writes,['a','b']);assert.equal(plugin.saved.folder,'b');
@@ -897,7 +943,7 @@ test('preset previews refresh task counts even when no live sidebar entry uses t
  const tab=t.tabs[0];tab.display();await plugin.taskCounter.reloadStatuses();
  assert.equal(tab.presetRows.get('p').children[2].textContent,'1');assert.equal(tab.presetRows.get('p').children[0].attrs['data-pie'],'true');
  t.metadata.set(file.path,{listItems:taskItems(['x','x'])});t.emit('changed',file);assert.equal(tab.presetRows.get('p').children[2].textContent,'0');
- tab.hide();assert.equal(plugin.taskCounter.enabledButtons().length,0);
+ tab.hide();assert.equal(plugin.taskCounter.entries().length,0);
 });
 
 test('renaming a preset preserves grip SVG geometry and updates only its accessible label',async()=>{

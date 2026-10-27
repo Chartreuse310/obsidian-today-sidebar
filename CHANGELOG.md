@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Let today's daily note choose its subtitle between the displayed date and the unfinished task count, and use the progress ring in place of its icon.
+- Keep the saved date format while the daily note shows a task count, so switching back to the date restores it.
+- Resolve the daily-note target at render time, so the count and the ring follow the current date and the current file.
+
 ## 0.23.3 — 2026-10-26
 
 - Replace clip-path with rectangular clipping for visually hidden navigation and drag labels, preserving accessible names and avoiding the css-clip-path compatibility warning.
