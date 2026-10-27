@@ -21,13 +21,13 @@ Keep today's daily note and frequently used files together in Obsidian's left si
 
 ## Requirements and availability
 
-Requires **Obsidian 1.8.7 or later**. Latest release: [**0.23.3**](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.3).
+Requires **Obsidian 1.8.7 or later**. Latest release: [**0.24.0**](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.24.0).
 
 Desktop acceptance testing has passed on macOS with Obsidian 1.14.5. Mobile acceptance testing has also been completed without reported issues. No other community plugin is required.
 
 ## Manual installation
 
-Download [ctz-today-sidebar.zip](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/download/0.23.3/ctz-today-sidebar.zip) from the [0.23.3 release](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.3). The ZIP contains the runtime files and LICENSE. Community directory submission is the next step; use manual installation for now.
+Download [ctz-today-sidebar.zip](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/download/0.24.0/ctz-today-sidebar.zip) from the [0.24.0 release](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.24.0). The ZIP contains the runtime files and LICENSE. Community directory submission is the next step; use manual installation for now.
 
 1. Unzip the download to get the `ctz-today-sidebar` folder.
 2. Move that entire folder into your vault's plugin directory, normally `.obsidian/plugins/`. The result should include `.obsidian/plugins/ctz-today-sidebar/main.js`.

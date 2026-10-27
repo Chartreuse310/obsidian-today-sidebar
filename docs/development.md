@@ -50,7 +50,7 @@ The optional Custom Icons integration uses a non-public plugin lookup, guarded b
 
 Keep the plugin id `ctz-today-sidebar` and existing settings compatible. Feature changes use a minor version and compatible fixes a patch version. Documentation-only changes do not change the runtime version.
 
-The current source version is 0.24.0, prepared for release. The latest published release is [0.23.3](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.23.3); a version bump or merge alone does not publish a release.
+The current source version matches the latest published release, [0.24.0](https://github.com/Chartreuse310/obsidian-today-sidebar/releases/tag/0.24.0). It was published after maintainer acceptance and automated release verification. A version bump or merge alone does not publish a release.
 
 ```sh
 npm version patch --no-git-tag-version
