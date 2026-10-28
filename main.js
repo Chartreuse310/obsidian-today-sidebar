@@ -17,7 +17,7 @@
 const {Plugin, View, ItemView, PluginSettingTab, Setting, Notice, Modal, TFile, TFolder, FileView, moment, normalizePath, setIcon, getIcon, getIconIds, AbstractInputSuggest, Menu, getLanguage} = require('obsidian');
 // Interface copy follows Obsidian; user data is never passed through this table.
 const COPY = Object.freeze({
-  "从模板新建": ["从模板新建", "New from template"],
+  "创建文件": ["创建文件", "Create file"],
   "模板 · 复制指定文件创建新笔记": ["模板 · 复制指定文件创建新笔记", "Template · Create a note from a file"],
   "模板文件": ["模板文件", "Template file"],
   "默认文件夹": ["默认文件夹", "Default folder"],
@@ -170,7 +170,7 @@ function loadButton(data, usedIds = new Set(), type = 'file') {
   while (usedIds.has(id)) id = newButtonId();
   usedIds.add(id);
   if (type === 'separator') return {id, type, hidden: data?.hidden === true, separatorStyle: Object.hasOwn(SEPARATOR_STYLES, data?.separatorStyle) ? data.separatorStyle : 'solid'};
-  const defaults = type === 'today' ? {...DEFAULTS, customTitle: '', customIcon: 'calendar-days'} : DEFAULTS;
+  const defaults = type === 'today' ? {...DEFAULTS, customTitle: '', customIcon: 'calendar-days'} : type === 'template' ? {...DEFAULTS, customIcon: 'circle-plus'} : DEFAULTS;
   // Today has no file to name and no property to read: its subtitle is the date, the task count or nothing.
   const subtitleModes = type === 'template' ? ['none', 'text'] : type === 'file' ? ['none', 'text', 'tasks', 'filename', 'frontmatter'] : ['none', 'text', 'tasks'];
   return {id, type, ...(type === 'template' ? {targetFolder: typeof data?.targetFolder === 'string' ? data.targetFolder : ''} : {}), hidden: data?.hidden === true, subtitleMode: subtitleModes.includes(data?.subtitleMode) ? data.subtitleMode : 'text', iconMode: (type === 'template' ? ['icon'] : ['icon', 'tasks']).includes(data?.iconMode) ? data.iconMode : 'icon', ...(type === 'file' ? {titleShorteningEnabled: data?.titleShorteningEnabled === true, titleShortName: typeof data?.titleShortName === 'string' ? data.titleShortName : '', titleMode: ['filename', 'frontmatter'].includes(data?.titleMode) ? data.titleMode : 'text', titleProperty: typeof data?.titleProperty === 'string' ? data.titleProperty : '', subtitleProperty: typeof data?.subtitleProperty === 'string' ? data.subtitleProperty : ''} : {}), ...Object.fromEntries(BUTTON_FIELDS.map(key => [key, typeof data?.[key] === 'string' ? data[key] : defaults[key]]))};
@@ -502,7 +502,7 @@ class TemplateModal extends Modal {
     this.submitting = false;
   }
   onOpen() {
-    this.setTitle(t('从模板新建'));
+    this.setTitle(t('创建文件'));
     this.contentEl.createEl('p', {text: t('选择文件夹并输入文件名，模板内容将原样复制。')});
     const form = this.contentEl.createEl('form');
     const fields = form.createDiv({cls: 'ctz-today-sidebar__create-fields'});
@@ -1063,7 +1063,7 @@ class TodaySettings extends PluginSettingTab {
       if (this.plugin.disposed) return;
       const menu = new Menu();
       menu.addItem(item => item.setTitle(t('File 类型')).setIcon('file').onClick(() => add('file')));
-      menu.addItem(item => item.setTitle(t('从模板新建')).setIcon('file-plus').onClick(() => add('template')));
+      menu.addItem(item => item.setTitle(t('创建文件')).setIcon('circle-plus').onClick(() => add('template')));
       menu.addItem(item => item.setTitle(t("分隔条目")).setIcon('minus').onClick(() => add('separator')));
       if (this.plugin.settings.presets.length) {
         menu.addSeparator();

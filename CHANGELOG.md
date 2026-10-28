@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.1 — 2026-10-28
+
+- Rename the template creation action to Create file.
+- Give the folder and file name areas a 1:2 width ratio in the creation dialog.
+- Default new template buttons to the built-in circle plus icon, preserving saved icon choices.
+
 ## 0.25.0 — 2026-10-28
 
 - Add template buttons that copy a selected Markdown file into a new note, with reusable presets and an optional default folder.

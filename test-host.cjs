@@ -38,7 +38,7 @@ class Element {
   empty() {this.children=[];if(this.settings)this.settings=[];}
 }
 function harness({DateClass=Date,language='zh'}={}) {
-  const notices=[],commands=[],tabs=[],factories=new Map(),leaves=[],listeners=new Set(),intervals=new Map(),suggestions=[],icons=['file','star','book-open','calendar-days','eye','eye-closed','eye-off'];let intervalId=0;
+  const notices=[],commands=[],tabs=[],factories=new Map(),leaves=[],listeners=new Set(),intervals=new Map(),suggestions=[],icons=['circle-plus','file','star','book-open','calendar-days','eye','eye-closed','eye-off'];let intervalId=0;
   class Plugin {
     constructor(){this.app=app;this.saved=null;}
     async loadData(){return this.saved;}

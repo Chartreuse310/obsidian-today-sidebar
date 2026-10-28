@@ -1094,7 +1094,7 @@ test('template sidebar opens one modal with folder suggestions and a separate fi
  assert.equal(editorSetting(tab,'默认文件夹').text.value,'Notes');assert.equal(editorSetting(tab,'模板文件').text.value,'template.md');assert.equal(editorSetting(tab,'图标显示'),undefined);
  const view=t.factories.get(t.h.VIEW_TYPE)({});await view.onOpen();
  const row=view.customRows.get('tpl').row;row.click();row.click();assert.equal(t.modals.length,1);
- const modal=plugin.templateModal;assert.equal(modal.folderInput.value,'Notes');assert.equal(modal.nameInput.focused,true);
+ const modal=plugin.templateModal;assert.equal(modal.title,'创建文件');assert.equal(modal.folderInput.value,'Notes');assert.equal(modal.nameInput.focused,true);
  assert.equal(modal.nameInput.parent.children[1].textContent,'.md');assert.equal(modal.nameInput.parent.children[1].tag,'span');
  assert.deepEqual([...modal.suggester.getSuggestions('note')],['Notes']);modal.suggester.selectSuggestion('/');assert.equal(modal.folderInput.value,'/');
  modal.nameInput.value='Hello';await modal.submit();assert.equal(t.contents.get('Hello.md'),'# Template');assert.deepEqual(t.opened,['Hello.md']);assert.equal(plugin.templateModal,null);
@@ -1123,5 +1123,12 @@ test('template button can be added from the menu and saved as an independent pre
  const t=await templateFixture(),tab=t.tabs[0];tab.display();await savePreset(tab,'模板预设');
  const preset=t.plugin.settings.presets[0];assert.equal(preset.button.type,'template');assert.equal(preset.button.targetFolder,'Notes');
  await tab.addButton.click();await t.menus.at(-1).items.find(item=>item.title==='模板预设').click();await editorSetting(tab,'默认文件夹').text.change('/');assert.equal(preset.button.targetFolder,'Notes');
- await tab.addButton.click();await t.menus.at(-1).items.find(item=>item.title==='从模板新建').click();assert.equal(t.plugin.settings.buttons.at(-1).type,'template');assert.equal(editorSetting(tab,'模板文件').text.value,'');
+ await tab.addButton.click();await t.menus.at(-1).items.find(item=>item.title==='创建文件').click();assert.equal(t.plugin.settings.buttons.at(-1).type,'template');assert.equal(editorSetting(tab,'模板文件').text.value,'');assert.equal(t.plugin.settings.buttons.at(-1).customIcon,'circle-plus');
+});
+
+test('Create file uses the circle plus by default and preserves saved icons',()=>{
+ const {h}=harness({language:'en'});assert.equal(h.t('创建文件'),'Create file');
+ const settings=h.loadSettings({buttons:[{type:'template'},{type:'template',customIcon:'lucide-plus-circle'},{type:'template',customIcon:'star'},{type:'file'}]});
+ assert.deepEqual([...settings.buttons.map(item=>item.customIcon)],['circle-plus','lucide-plus-circle','star','file']);
+ assert.equal(h.loadSettings(settings).buttons[2].customIcon,'star');
 });

@@ -271,9 +271,9 @@ test('template modal renders folder left, filename right and an uneditable exten
    await page.setViewportSize({width,height:400});
    const geometry=await page.evaluate(()=>{
     const folder=document.querySelector('input[aria-label="文件夹"]'),name=document.querySelector('input[aria-label="文件名"]'),extension=document.querySelector('.ctz-today-sidebar__create-extension');const f=folder.getBoundingClientRect(),n=name.getBoundingClientRect(),e=extension.getBoundingClientRect();
-    return {folderLeft:f.left,folderRight:f.right,nameLeft:n.left,nameRight:n.right,extensionLeft:e.left,extensionRight:e.right,topDelta:f.top-n.top,extensionTag:extension.tagName,extensionText:extension.textContent,editable:extension.isContentEditable,overflow:document.documentElement.scrollWidth>innerWidth};
+    return {folderLeft:f.left,folderRight:f.right,folderWidth:f.width,nameGroupWidth:document.querySelector('.ctz-today-sidebar__create-name').getBoundingClientRect().width,nameLeft:n.left,nameRight:n.right,extensionLeft:e.left,extensionRight:e.right,topDelta:f.top-n.top,extensionTag:extension.tagName,extensionText:extension.textContent,editable:extension.isContentEditable,overflow:document.documentElement.scrollWidth>innerWidth};
    });
-   assert.ok(geometry.folderRight<geometry.nameLeft);assert.ok(Math.abs(geometry.topDelta)<1);assert.ok(geometry.nameRight<=geometry.extensionLeft);assert.ok(geometry.extensionRight<=width-20);assert.equal(geometry.extensionTag,'SPAN');assert.equal(geometry.extensionText,'.md');assert.equal(geometry.editable,false);assert.equal(geometry.overflow,false);
+   assert.ok(Math.abs(geometry.nameGroupWidth / geometry.folderWidth - 2)<0.02,'folder and name areas should have a 1:2 width ratio');assert.ok(geometry.folderRight<geometry.nameLeft);assert.ok(Math.abs(geometry.topDelta)<1);assert.ok(geometry.nameRight<=geometry.extensionLeft);assert.ok(geometry.extensionRight<=width-20);assert.equal(geometry.extensionTag,'SPAN');assert.equal(geometry.extensionText,'.md');assert.equal(geometry.editable,false);assert.equal(geometry.overflow,false);
   }
  }finally{await browser.close();}
 });

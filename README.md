@@ -54,11 +54,11 @@ Use the eye button to hide an item while keeping its settings. Drag the handle o
 
 For repeated setups, use **Save as preset** on a file or separator. Add a copy from the Add menu; later edits to a preset and its copies are independent.
 
-### New from template
+### Create file
 
-Choose **Add → New from template**, select a Markdown **Template file**, and optionally set a **Default folder**, title, subtitle and icon. Template buttons also support presets.
+Choose **Add → Create file**, select a Markdown **Template file**, and optionally set a **Default folder**, title, subtitle and icon. New buttons use a circle plus icon by default. Template buttons also support presets.
 
-Click the sidebar button to open the creation dialog: the folder input on the left suggests existing vault folders; the file name input on the right has a fixed, noneditable `.md` suffix outside the input. Change the default folder for each new note, or leave it empty / choose `/` for the vault root. Folders must already exist.
+Click the sidebar button to open the creation dialog: the narrower folder input on the left suggests existing vault folders; the file name area on the right is twice as wide and has a fixed, noneditable `.md` suffix outside the input. Change the default folder for each new note, or leave it empty / choose `/` for the vault root. Folders must already exist.
 
 Click **Create** or press Enter to copy the template content and open the new note. Existing files are never overwritten. Content is copied as is, without evaluating template variables or Templater syntax. Errors keep the dialog and its inputs available for correction.
 

@@ -430,7 +430,7 @@
 
 .ctz-today-sidebar__create-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: var(--size-4-3, 12px);
 }
 .ctz-today-sidebar__create-fields label {
