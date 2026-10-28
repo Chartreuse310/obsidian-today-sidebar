@@ -54,6 +54,13 @@ function harness({DateClass=Date,language='zh'}={}) {
     constructor(leaf){this.leaf=leaf;this.contentEl=new Element();}
     registerDomEvent(el,type,fn){el[type]=fn;}
   }
+  const modals=[];
+  class Modal {
+    constructor(app){this.app=app;this.contentEl=new Element();modals.push(this);}
+    setTitle(value){this.title=value;}
+    open(){this.onOpen();}
+    close(){this.onClose();}
+  }
   class ItemView extends View {}
   class FileView extends View {constructor(file){super({});this.file=file;}}
   class PluginSettingTab {constructor(app){this.app=app;this.containerEl=new Element();}}
@@ -79,10 +86,12 @@ function harness({DateClass=Date,language='zh'}={}) {
     addText(fn){this.text={inputEl:new Element('input'),setPlaceholder(){return this;},setValue(value){this.value=value;this.inputEl.value=value;return this;},onChange(fn){this.change=value=>{this.inputEl.value=value;this.value=value;return fn(value);};return this;}};fn(this.text);return this;}
   }
   class TFile {constructor(path){this.path=path;this.extension=path.split('.').pop();}}
+  class TFolder {constructor(path){this.path=path;}}
+  const contents=new Map();
   const files=new Map(),mainLeaves=[],revealedLeaves=[],activatedLeaves=[];let layoutReady,created=0,reveals=0,opened=[];
   const providers=new Map(),metadata=new Map(),adapterFiles=new Map(),metadataReads=[],propertyInfos=new Map();
   const on=(name,fn)=>{const ref={name,fn};listeners.add(ref);return ref;};
-  const app={plugins:{getPlugin:id=>providers.get(id)},metadataCache:{getFileCache(file){metadataReads.push(file.path);return metadata.get(file.path)??null;},getAllPropertyInfos(){return Object.fromEntries(propertyInfos);},on},vault:{configDir:'.obsidian',adapter:{async exists(path){return adapterFiles.has(path);},async read(path){return adapterFiles.get(path);}},on,getAbstractFileByPath:path=>files.get(path),getFiles:()=>[...files.values()].filter(file=>file instanceof TFile)},workspace:{
+  const app={plugins:{getPlugin:id=>providers.get(id)},metadataCache:{getFileCache(file){metadataReads.push(file.path);return metadata.get(file.path)??null;},getAllPropertyInfos(){return Object.fromEntries(propertyInfos);},on},vault:{configDir:'.obsidian',adapter:{async exists(path){return adapterFiles.has(path);},async read(path){return adapterFiles.get(path);}},on,getAllFolders:()=>[...files.values()].filter(file=>file instanceof TFolder),async read(file){return contents.get(file.path)||'';},async create(path,content){if(files.has(path))throw Error('Already exists');const file=new TFile(path);files.set(path,file);contents.set(path,content);return file;},getAbstractFileByPath:path=>files.get(path),getFiles:()=>[...files.values()].filter(file=>file instanceof TFile)},workspace:{
     activeLeaf:null,
     getActiveViewOfType(Type){const view=this.activeLeaf?.view;return view instanceof Type?view:null;},
     mostRecentLeaf:null,
@@ -97,8 +106,8 @@ function harness({DateClass=Date,language='zh'}={}) {
     onLayoutReady(fn){layoutReady=fn;},
   }};
   const module={exports:{}};
-  const obsidian={getLanguage:()=>language,Plugin,View,ItemView,PluginSettingTab,Setting,Menu,TFile,FileView,AbstractInputSuggest,getIcon:id=>icons.includes(id)?{}:null,getIconIds:()=>[...icons],Notice:class{constructor(text){notices.push(text);}},moment:hostMoment(),normalizePath:p=>p.replace(/\/+/g,'/'),setIcon(el,name){el.icon=name;if(name==='grip-vertical')el.createSvg('svg').createSvg('circle',{attr:{cx:'9',cy:'5',r:'1'}});}};
+  const obsidian={getLanguage:()=>language,Plugin,View,ItemView,PluginSettingTab,Setting,Menu,Modal,TFile,TFolder,FileView,AbstractInputSuggest,getIcon:id=>icons.includes(id)?{}:null,getIconIds:()=>[...icons],Notice:class{constructor(text){notices.push(text);}},moment:hostMoment(),normalizePath:p=>p.replace(/\/+/g,'/'),setIcon(el,name){el.icon=name;if(name==='grip-vertical')el.createSvg('svg').createSvg('circle',{attr:{cx:'9',cy:'5',r:'1'}});}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'main.js'),'utf8'),{module,exports:module.exports,require:name=>{if(name!=='obsidian')throw Error(name);return obsidian;},Date:DateClass,crypto:crypto.webcrypto,console,window:{requestAnimationFrame(){return 1;},cancelAnimationFrame(){},setInterval(fn){const id=++intervalId;intervals.set(id,fn);return id;}}},{filename:'main.js'});
-  return {menus,Plugin:module.exports,h:module.exports.testing,moment:obsidian.moment,app,files,TFile,FileView,providers,metadata,adapterFiles,metadataReads,propertyInfos,listeners,intervals,suggestions,icons,Element,emit:(name,...args)=>{for(const ref of [...listeners])if(ref.name===name)ref.fn(...args);},notices,commands,tabs,factories,leaves,mainLeaves,revealedLeaves,activatedLeaves,get created(){return created;},get reveals(){return reveals;},get opened(){return opened;},ready:()=>layoutReady()};
+  return {modals,contents,TFolder,menus,Plugin:module.exports,h:module.exports.testing,moment:obsidian.moment,app,files,TFile,FileView,providers,metadata,adapterFiles,metadataReads,propertyInfos,listeners,intervals,suggestions,icons,Element,emit:(name,...args)=>{for(const ref of [...listeners])if(ref.name===name)ref.fn(...args);},notices,commands,tabs,factories,leaves,mainLeaves,revealedLeaves,activatedLeaves,get created(){return created;},get reveals(){return reveals;},get opened(){return opened;},ready:()=>layoutReady()};
 }
 module.exports={harness,hostMoment};

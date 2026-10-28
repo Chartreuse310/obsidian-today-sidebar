@@ -895,7 +895,7 @@ test('presets save snapshots, edit separately, add independent entries and survi
  await editorSetting(tab,'主标题').text.change('预设标题');assert.equal(plugin.settings.buttons[0].customTitle,'收集');
  metadata.set(file.path,{frontmatter:{summary:'更新值'}});emit('changed',file);assert.equal(editorSetting(tab,'副标题属性名').controlEl.children.at(-1).textContent,'更新值');
  await editorSetting(tab,'预设名称').text.change('新版预设');assert.equal(tab.presetRows.get(preset.id).children[1].textContent,'新版预设');
- await tab.addButton.click();const menu=menus.at(-1);assert.equal(menu.items[2].separator,true);assert.equal(menu.items[3].title,'新版预设');await menu.items[3].click();
+ await tab.addButton.click();const menu=menus.at(-1);assert.ok(menu.items.some(item=>item.separator));await menu.items.find(item=>item.title==='新版预设').click();
  const added=plugin.settings.buttons.at(-1);assert.notEqual(added.id,preset.button.id);assert.equal(added.customTitle,'预设标题');assert.equal(added.subtitleProperty,'summary');assert.equal(added.iconMode,'tasks');
  await editorSetting(tab,'主标题').text.change('独立条目');assert.equal(preset.button.customTitle,'预设标题');
  const next=new plugin.constructor();next.saved=plugin.saved;await next.onload();assert.equal(next.settings.presets[0].button.customTitle,'预设标题');assert.equal(next.settings.buttons.at(-1).customTitle,'独立条目');
@@ -1014,7 +1014,7 @@ test('interface language follows Obsidian and defaults to English for unsupporte
   assert.equal(tab.savePresetButton.textContent,chinese?'保存为预设':'Save as preset');
   assert.equal(tab.editorEl.settings.find(item=>item.name===(chinese?'主标题来源':'Title source')).dropdown.options.frontmatter,chinese?'文件属性':'Frontmatter property');
   await tab.addButton.click();assert.equal(t.menus.at(-1).items[0].title,chinese?'文件':'File');
-  await t.menus.at(-1).items[1].click();assert.equal(tab.editorEl.settings.find(item=>item.name===(chinese?'分隔样式':'Separator style')).dropdown.options.space,chinese?'空白占位':'Spacer');
+  await t.menus.at(-1).items.find(item=>item.title===(chinese?'分隔条目':'Separator')).click();assert.equal(tab.editorEl.settings.find(item=>item.name===(chinese?'分隔样式':'Separator style')).dropdown.options.space,chinese?'空白占位':'Spacer');
   plugin.onunload();
  }
 });
@@ -1068,4 +1068,60 @@ test('navigation keeps its localized accessible name without the aria-label tool
   }
   assert.notEqual(views[0].nav.attrs['aria-labelledby'],views[1].nav.attrs['aria-labelledby']);
  }
+});
+
+test('template buttons and presets survive loading with their default folder',()=>{
+ const {h}=harness();const settings=h.loadSettings({buttons:[{id:'tpl',type:'template',customPath:'Templates/note.md',targetFolder:'Notes'}],presets:[{id:'p',name:'Template',button:{type:'template',customPath:'Templates/note.md',targetFolder:'Notes'}}]});
+ assert.equal(settings.buttons[0]?.type,'template');assert.equal(settings.buttons[0].targetFolder,'Notes');
+ assert.equal(h.loadSettings(settings).presets[0].button.targetFolder,'Notes');
+});
+test('template creation validates folder, name and collisions before copying content',async()=>{
+ const t=harness();const plugin=new t.Plugin();plugin.saved={buttons:[{id:'tpl',type:'template',customPath:'template.md'}]};await plugin.onload();
+ const source=new t.TFile('template.md');t.files.set(source.path,source);t.files.set('Notes',new t.TFolder('Notes'));t.contents.set(source.path,'---\ntitle: {{title}}\n---\nBody');
+ for(const [folder,name] of [['Notes',''],['Notes','../escape'],['Notes','nested/name'],['missing','note'],['template.md','note'],['Notes','..']])await assert.rejects(()=>plugin.createFromTemplate('tpl',folder,name));
+ const file=await plugin.createFromTemplate('tpl','Notes','New.md');assert.equal(file.path,'Notes/New.md');assert.equal(t.contents.get(file.path),t.contents.get(source.path));
+ await assert.rejects(()=>plugin.createFromTemplate('tpl','Notes','New'),/已存在/);assert.equal(t.contents.get(source.path),'---\ntitle: {{title}}\n---\nBody');
+ const root=await plugin.createFromTemplate('tpl','/','Root');assert.equal(root.path,'Root.md');
+ t.files.delete(source.path);await assert.rejects(()=>plugin.createFromTemplate('tpl','','Missing'),/模板/);
+});
+async function templateFixture(){
+ const t=harness(),plugin=new t.Plugin();plugin.saved={buttons:[{id:'tpl',type:'template',customTitle:'新项目',customPath:'template.md',targetFolder:'Notes'}]};await plugin.onload();
+ t.files.set('template.md',new t.TFile('template.md'));t.files.set('Notes',new t.TFolder('Notes'));t.contents.set('template.md','# Template');
+ return {...t,plugin};
+}
+test('template sidebar opens one modal with folder suggestions and a separate fixed extension',async()=>{
+ const t=await templateFixture(),{plugin}=t,tab=t.tabs[0];tab.display();
+ assert.equal(editorSetting(tab,'默认文件夹').text.value,'Notes');assert.equal(editorSetting(tab,'模板文件').text.value,'template.md');assert.equal(editorSetting(tab,'图标显示'),undefined);
+ const view=t.factories.get(t.h.VIEW_TYPE)({});await view.onOpen();
+ const row=view.customRows.get('tpl').row;row.click();row.click();assert.equal(t.modals.length,1);
+ const modal=plugin.templateModal;assert.equal(modal.folderInput.value,'Notes');assert.equal(modal.nameInput.focused,true);
+ assert.equal(modal.nameInput.parent.children[1].textContent,'.md');assert.equal(modal.nameInput.parent.children[1].tag,'span');
+ assert.deepEqual([...modal.suggester.getSuggestions('note')],['Notes']);modal.suggester.selectSuggestion('/');assert.equal(modal.folderInput.value,'/');
+ modal.nameInput.value='Hello';await modal.submit();assert.equal(t.contents.get('Hello.md'),'# Template');assert.deepEqual(t.opened,['Hello.md']);assert.equal(plugin.templateModal,null);
+ row.click();plugin.onunload();assert.equal(plugin.templateModal,null);assert.equal(t.modals.at(-1).closed,true);
+});
+test('template modal keeps collisions editable and prevents duplicate submits',async()=>{
+ const t=await templateFixture();t.plugin.openTemplate('tpl');const modal=t.plugin.templateModal;
+ t.files.set('Notes/Taken.md',new t.TFile('Notes/Taken.md'));modal.nameInput.value='Taken';await modal.submit();assert.match(modal.errorEl.textContent,/已存在/);assert.equal(modal.closed,false);
+ let finishRead;t.app.vault.read=()=>new Promise(resolve=>{finishRead=resolve;});modal.nameInput.value='New';const pending=modal.submit();await modal.submit();assert.equal(modal.submitButton.disabled,true);
+ finishRead('Updated template');await pending;assert.equal(t.contents.get('Notes/New.md'),'Updated template');assert.deepEqual(t.opened,['Notes/New.md']);
+});
+test('cancelling or unloading during template read does not create a file',async()=>{
+ for(const unload of [false,true]){
+  const t=await templateFixture();t.plugin.openTemplate('tpl');const modal=t.plugin.templateModal;modal.nameInput.value='Cancelled';let finishRead;
+  t.app.vault.read=()=>new Promise(resolve=>{finishRead=resolve;});const pending=modal.submit();if(unload)t.plugin.onunload();else modal.close();finishRead('Body');await pending;
+  assert.equal(t.files.has('Notes/Cancelled.md'),false);assert.equal(t.opened.length,0);
+ }
+});
+test('template creation refuses a collision appearing while reading, invalid sources and failed reads',async()=>{
+ const t=await templateFixture();let finishRead;t.app.vault.read=()=>new Promise(resolve=>{finishRead=resolve;});const pending=t.plugin.createFromTemplate('tpl','Notes','Race');
+ t.files.set('Notes/Race.md',new t.TFile('Notes/Race.md'));t.contents.set('Notes/Race.md','Keep');finishRead('Replace');await assert.rejects(()=>pending);assert.equal(t.contents.get('Notes/Race.md'),'Keep');
+ t.app.vault.read=async()=>{throw Error('read failed');};await assert.rejects(()=>t.plugin.createFromTemplate('tpl','','Unread'),/read failed/);assert.equal(t.files.has('Unread.md'),false);
+ t.plugin.settings.buttons[0].customPath='image.png';t.files.set('image.png',new t.TFile('image.png'));await assert.rejects(()=>t.plugin.createFromTemplate('tpl','','Invalid'),/Markdown/);
+});
+test('template button can be added from the menu and saved as an independent preset',async()=>{
+ const t=await templateFixture(),tab=t.tabs[0];tab.display();await savePreset(tab,'模板预设');
+ const preset=t.plugin.settings.presets[0];assert.equal(preset.button.type,'template');assert.equal(preset.button.targetFolder,'Notes');
+ await tab.addButton.click();await t.menus.at(-1).items.find(item=>item.title==='模板预设').click();await editorSetting(tab,'默认文件夹').text.change('/');assert.equal(preset.button.targetFolder,'Notes');
+ await tab.addButton.click();await t.menus.at(-1).items.find(item=>item.title==='从模板新建').click();assert.equal(t.plugin.settings.buttons.at(-1).type,'template');assert.equal(editorSetting(tab,'模板文件').text.value,'');
 });

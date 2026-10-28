@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.0 — 2026-10-28
+
+- Add template buttons that copy a selected Markdown file into a new note, with reusable presets and an optional default folder.
+- Choose an existing folder with suggestions on the left and enter a file name on the right, followed by a fixed `.md` suffix.
+- Prevent overwrites and duplicate submissions, and retain input when creation fails. Copy template content without evaluating variables.
+
 ## 0.24.0 — 2026-10-27
 
 - Let today's daily note choose its subtitle between the displayed date and the unfinished task count, and use the progress ring in place of its icon.

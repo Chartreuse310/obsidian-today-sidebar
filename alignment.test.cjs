@@ -100,7 +100,7 @@ test('progress pies paint exact fractions, follow theme and row states, and fall
    const module={exports:{}};
    new Function('require','module',source)(name=>{
     if(name!=='obsidian')throw Error(name);
-    return {Plugin:class{},ItemView:class{},PluginSettingTab:class{},Setting:class{},Menu:class{},Notice:class{},TFile:class{},FileView:class{},AbstractInputSuggest:class{},getIcon:()=>({}),getIconIds:()=>[],setIcon(el,name){el.textContent=name;},moment:{locale(){return this;},format(){return '';}},normalizePath:value=>value};
+    return {Modal:class{},Plugin:class{},ItemView:class{},PluginSettingTab:class{},Setting:class{},Menu:class{},Notice:class{},TFile:class{},FileView:class{},AbstractInputSuggest:class{},getIcon:()=>({}),getIconIds:()=>[],setIcon(el,name){el.textContent=name;},moment:{locale(){return this;},format(){return '';}},normalizePath:value=>value};
    },module);
    window.drawEntryIcon=module.exports.testing.drawEntryIcon;
   },fs.readFileSync(path.join(__dirname,'main.js'),'utf8'));
@@ -204,7 +204,7 @@ test('real pointer capture commits the visible drag preview across left drift an
    await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'styles.css'),'utf8')});
    await page.evaluate(({source,kind})=>{
     HTMLElement.prototype.createDiv=function(opts){const el=document.createElement('div');el.className=opts.cls;for(const [key,value]of Object.entries(opts.attr||{}))el.setAttribute(key,value);this.append(el);return el;};
-    const module={exports:{}};new Function('require','module',source)(()=>({Plugin:class{},ItemView:class{},PluginSettingTab:class{},AbstractInputSuggest:class{}}),module);
+    const module={exports:{}};new Function('require','module',source)(()=>({Modal:class{},Plugin:class{},ItemView:class{},PluginSettingTab:class{},AbstractInputSuggest:class{}}),module);
     delete window.savedOrder;
     const list=document.querySelector('nav'),tab=new module.exports.testing.TodaySettings({},{});
     tab.plugin={settings:{buttons:['a','b','c'].map(id=>({id}))}};tab.entryRows=new Map();tab.dragHandles=new Map();
@@ -239,7 +239,7 @@ test('title overflow measurement follows rendered row space, theme fonts and sub
   await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'styles.css'),'utf8')});
   await page.evaluate(source=>{
    HTMLElement.prototype.createDiv=function(opts){const element=document.createElement('div');element.className=opts.cls;this.append(element);return element;};
-   const module={exports:{}};new Function('require','module',source)(()=>({Plugin:class{},ItemView:class{},PluginSettingTab:class{},AbstractInputSuggest:class{}}),module);
+   const module={exports:{}};new Function('require','module',source)(()=>({Modal:class{},Plugin:class{},ItemView:class{},PluginSettingTab:class{},AbstractInputSuggest:class{}}),module);
    window.measureTitle=module.exports.testing.titleOverflows;
   },fs.readFileSync(path.join(__dirname,'main.js'),'utf8'));
   for(const width of [120,220,380])for(const size of [12,18])for(const subtitle of ['12','较长的副标题'])for(const title of ['短','abcdefghijklm','中文标题'.repeat(15),'👩‍💻'.repeat(12)]){
@@ -253,5 +253,27 @@ test('title overflow measurement follows rendered row space, theme fonts and sub
    assert.equal(result.measured,result.expected,JSON.stringify({width,size,subtitle,title}));assert.equal(result.clean,true);
   }
   await page.locator('#fixture').evaluate(el=>el.style.display='none');assert.equal(await page.evaluate(()=>window.measureTitle(document.querySelector('button'),'长标题')),null);
+ }finally{await browser.close();}
+});
+
+test('template modal renders folder left, filename right and an uneditable extension at narrow widths',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
+ try{
+  const page=await browser.newPage();await page.setContent('<style>body{margin:0;padding:20px}.modal{width:100%;box-sizing:border-box}input{height:32px}label{font:14px sans-serif}</style><div class="modal"></div>');
+  await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'styles.css'),'utf8')});
+  await page.evaluate(source=>{
+   function decorate(el){el.createEl=function(tag,opts={}){const child=decorate(document.createElement(tag));child.className=opts.cls||'';child.textContent=opts.text||'';for(const [key,value] of Object.entries(opts.attr||{}))child.setAttribute(key,value);this.append(child);return child;};el.createDiv=opts=>el.createEl('div',opts);el.createSpan=opts=>el.createEl('span',opts);return el;}
+   class Modal{constructor(app){this.app=app;this.contentEl=decorate(document.querySelector('.modal'));}setTitle(){}close(){}}
+   const module={exports:{}};new Function('require','module',source)(()=>({Modal,Plugin:class{},ItemView:class{},PluginSettingTab:class{},AbstractInputSuggest:class{},getLanguage:()=> 'zh'}),module);
+   const plugin={app:{vault:{getAllFolders:()=>[]}}};new module.exports.testing.TemplateModal(plugin,{targetFolder:'Notes'}).onOpen();
+  },fs.readFileSync(path.join(__dirname,'main.js'),'utf8'));
+  for(const width of [360,600]){
+   await page.setViewportSize({width,height:400});
+   const geometry=await page.evaluate(()=>{
+    const folder=document.querySelector('input[aria-label="文件夹"]'),name=document.querySelector('input[aria-label="文件名"]'),extension=document.querySelector('.ctz-today-sidebar__create-extension');const f=folder.getBoundingClientRect(),n=name.getBoundingClientRect(),e=extension.getBoundingClientRect();
+    return {folderLeft:f.left,folderRight:f.right,nameLeft:n.left,nameRight:n.right,extensionLeft:e.left,extensionRight:e.right,topDelta:f.top-n.top,extensionTag:extension.tagName,extensionText:extension.textContent,editable:extension.isContentEditable,overflow:document.documentElement.scrollWidth>innerWidth};
+   });
+   assert.ok(geometry.folderRight<geometry.nameLeft);assert.ok(Math.abs(geometry.topDelta)<1);assert.ok(geometry.nameRight<=geometry.extensionLeft);assert.ok(geometry.extensionRight<=width-20);assert.equal(geometry.extensionTag,'SPAN');assert.equal(geometry.extensionText,'.md');assert.equal(geometry.editable,false);assert.equal(geometry.overflow,false);
+  }
  }finally{await browser.close();}
 });

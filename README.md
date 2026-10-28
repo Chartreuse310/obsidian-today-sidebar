@@ -44,7 +44,7 @@ Set **Daily notes folder** and **Filename date format** to match where you keep 
 
 **Subtitle display** chooses between the date and today's unfinished task count. The date defaults to `YYYY-MM-DD ddd`, with weekday names in English; clearing the date format hides the subtitle without changing the path. Choosing the task count replaces the date with that number, keeps the date format saved, and restores the date when you switch back.
 
-Today Sidebar opens existing files. If today's note is missing, it shows the expected path so you can create it with your usual daily-note workflow.
+Today and regular file shortcuts open existing files. If today's note is missing, it shows the expected path so you can create it with your usual daily-note workflow.
 
 ### File shortcuts and layout
 
@@ -53,6 +53,14 @@ Choose **Add → File**, then select a vault file in **File path**. Choose how i
 Use the eye button to hide an item while keeping its settings. Drag the handle or use the move buttons to reorder items. Add a solid line, dashed line, or spacer to group shortcuts. Deleting an item removes its shortcut and keeps the file; Today can be hidden but cannot be deleted.
 
 For repeated setups, use **Save as preset** on a file or separator. Add a copy from the Add menu; later edits to a preset and its copies are independent.
+
+### New from template
+
+Choose **Add → New from template**, select a Markdown **Template file**, and optionally set a **Default folder**, title, subtitle and icon. Template buttons also support presets.
+
+Click the sidebar button to open the creation dialog: the folder input on the left suggests existing vault folders; the file name input on the right has a fixed, noneditable `.md` suffix outside the input. Change the default folder for each new note, or leave it empty / choose `/` for the vault root. Folders must already exist.
+
+Click **Create** or press Enter to copy the template content and open the new note. Existing files are never overwritten. Content is copied as is, without evaluating template variables or Templater syntax. Errors keep the dialog and its inputs available for correction.
 
 ## Task counts and progress
 
