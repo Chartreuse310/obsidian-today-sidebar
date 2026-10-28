@@ -17,7 +17,8 @@ export async function buildPackage({projectRoot=path.resolve(path.dirname(fileUR
     const zip=path.join(temp,'bundle.zip');
     execFileSync('zip',['-q','-X',zip,...files.map(file=>manifest.id+'/'+file)],{cwd:temp});
     await fs.mkdir(outDir,{recursive:true});const output=path.join(outDir,manifest.id+'.zip');
-    await fs.rename(zip,output);return output;
+    // The system temp directory and output may live on different filesystems.
+    await fs.copyFile(zip,output);return output;
   }finally{await fs.rm(temp,{recursive:true,force:true});}
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))console.log(await buildPackage());

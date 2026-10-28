@@ -63,3 +63,20 @@ test('release preparation freezes five exact assets, requires matching metadata 
   await assert.rejects(fs.access(path.join(root,'bad')));
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
+
+test('package output stays valid when the filesystem rejects cross-device renames',async t=>{
+ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'today-package-cross-device-'));
+ try{
+  t.mock.method(fs,'rename',async()=>{throw Object.assign(new Error('Cross-device link not permitted'),{code:'EXDEV'});});
+  const {buildPackage}=await import('./scripts/package.mjs');
+  const expected=path.join(temp,'ctz-today-sidebar.zip');
+  await fs.writeFile(expected,'Old package');
+  const output=await buildPackage({outDir:temp});assert.equal(output,expected);
+  const entries=execFileSync('unzip',['-Z1',output],{encoding:'utf8'}).trim().split('\n');
+  assert.equal(entries.length,4);
+  for(const file of ['main.js','manifest.json','styles.css','LICENSE']){
+   assert.ok(entries.includes('ctz-today-sidebar/'+file));
+   assert.equal(hash(execFileSync('unzip',['-p',output,'ctz-today-sidebar/'+file])),hash(await fs.readFile(path.join(__dirname,file))));
+  }
+ }finally{await fs.rm(temp,{recursive:true,force:true});}
+});

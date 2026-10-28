@@ -14,9 +14,25 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 'use strict';
-const {Plugin, View, ItemView, PluginSettingTab, Setting, Notice, TFile, FileView, moment, normalizePath, setIcon, getIcon, getIconIds, AbstractInputSuggest, Menu, getLanguage} = require('obsidian');
+const {Plugin, View, ItemView, PluginSettingTab, Setting, Notice, Modal, TFile, TFolder, FileView, moment, normalizePath, setIcon, getIcon, getIconIds, AbstractInputSuggest, Menu, getLanguage} = require('obsidian');
 // Interface copy follows Obsidian; user data is never passed through this table.
 const COPY = Object.freeze({
+  "创建文件": ["创建文件", "Create file"],
+  "模板 · 复制指定文件创建新笔记": ["模板 · 复制指定文件创建新笔记", "Template · Create a note from a file"],
+  "模板文件": ["模板文件", "Template file"],
+  "默认文件夹": ["默认文件夹", "Default folder"],
+  "文件夹": ["文件夹", "Folder"],
+  "库根目录": ["库根目录", "Vault root"],
+  "创建": ["创建", "Create"],
+  "取消": ["取消", "Cancel"],
+  "模板必须是已有的 Markdown 文件。": ["模板必须是已有的 Markdown 文件。", "The template must be an existing Markdown file."],
+  "请选择已有文件夹，留空表示库根目录。": ["请选择已有文件夹，留空表示库根目录。", "Choose an existing folder. Leave empty for the vault root."],
+  "文件名不能包含文件夹路径。": ["文件名不能包含文件夹路径。", "The file name must not contain a folder path."],
+  "文件已存在：{path}": ["文件已存在：{path}", "File already exists: {path}"],
+  "无法创建文件：{error}": ["无法创建文件：{error}", "Could not create the file: {error}"],
+  "文件已创建，但无法打开：{error}": ["文件已创建，但无法打开：{error}", "File created, but could not open it: {error}"],
+  "选择文件夹并输入文件名，模板内容将原样复制。": ["选择文件夹并输入文件名，模板内容将原样复制。", "Choose a folder and file name. The template content will be copied as is."],
+
   " 无任务显示 0，无法统计显示 —，等待缓存显示 …。": [" 无任务显示 0，无法统计显示 —，等待缓存显示 …。", " Show 0 when there are no tasks, — when unavailable, and … while waiting for metadata."],
   "File · 打开指定文件": ["文件 · 打开指定文件", "File · Open a specific file"],
   "File 类型": ["文件", "File"],
@@ -154,10 +170,10 @@ function loadButton(data, usedIds = new Set(), type = 'file') {
   while (usedIds.has(id)) id = newButtonId();
   usedIds.add(id);
   if (type === 'separator') return {id, type, hidden: data?.hidden === true, separatorStyle: Object.hasOwn(SEPARATOR_STYLES, data?.separatorStyle) ? data.separatorStyle : 'solid'};
-  const defaults = type === 'today' ? {...DEFAULTS, customTitle: '', customIcon: 'calendar-days'} : DEFAULTS;
+  const defaults = type === 'today' ? {...DEFAULTS, customTitle: '', customIcon: 'calendar-days'} : type === 'template' ? {...DEFAULTS, customIcon: 'circle-plus'} : DEFAULTS;
   // Today has no file to name and no property to read: its subtitle is the date, the task count or nothing.
-  const subtitleModes = type === 'file' ? ['none', 'text', 'tasks', 'filename', 'frontmatter'] : ['none', 'text', 'tasks'];
-  return {id, type, hidden: data?.hidden === true, subtitleMode: subtitleModes.includes(data?.subtitleMode) ? data.subtitleMode : 'text', iconMode: ['icon', 'tasks'].includes(data?.iconMode) ? data.iconMode : 'icon', ...(type === 'file' ? {titleShorteningEnabled: data?.titleShorteningEnabled === true, titleShortName: typeof data?.titleShortName === 'string' ? data.titleShortName : '', titleMode: ['filename', 'frontmatter'].includes(data?.titleMode) ? data.titleMode : 'text', titleProperty: typeof data?.titleProperty === 'string' ? data.titleProperty : '', subtitleProperty: typeof data?.subtitleProperty === 'string' ? data.subtitleProperty : ''} : {}), ...Object.fromEntries(BUTTON_FIELDS.map(key => [key, typeof data?.[key] === 'string' ? data[key] : defaults[key]]))};
+  const subtitleModes = type === 'template' ? ['none', 'text'] : type === 'file' ? ['none', 'text', 'tasks', 'filename', 'frontmatter'] : ['none', 'text', 'tasks'];
+  return {id, type, ...(type === 'template' ? {targetFolder: typeof data?.targetFolder === 'string' ? data.targetFolder : ''} : {}), hidden: data?.hidden === true, subtitleMode: subtitleModes.includes(data?.subtitleMode) ? data.subtitleMode : 'text', iconMode: (type === 'template' ? ['icon'] : ['icon', 'tasks']).includes(data?.iconMode) ? data.iconMode : 'icon', ...(type === 'file' ? {titleShorteningEnabled: data?.titleShorteningEnabled === true, titleShortName: typeof data?.titleShortName === 'string' ? data.titleShortName : '', titleMode: ['filename', 'frontmatter'].includes(data?.titleMode) ? data.titleMode : 'text', titleProperty: typeof data?.titleProperty === 'string' ? data.titleProperty : '', subtitleProperty: typeof data?.subtitleProperty === 'string' ? data.subtitleProperty : ''} : {}), ...Object.fromEntries(BUTTON_FIELDS.map(key => [key, typeof data?.[key] === 'string' ? data[key] : defaults[key]]))};
 }
 
 function loadSettings(data) {
@@ -169,6 +185,7 @@ function loadSettings(data) {
     if (item.type === 'today') {
       if (!buttons.some(button => button.type === 'today')) buttons.push(loadButton(item, usedIds, 'today'));
     } else if (item.type === 'separator') buttons.push(loadButton(item, usedIds, 'separator'));
+    else if (item.type === 'template') buttons.push(loadButton(item, usedIds, 'template'));
     else if (!item.type || item.type === 'button' || item.type === 'file') buttons.push(loadButton(item, usedIds));
   }
   return {
@@ -176,7 +193,7 @@ function loadSettings(data) {
     dateFormat: typeof data?.dateFormat === 'string' ? data.dateFormat : DEFAULTS.dateFormat,
     displayFormat: typeof data?.displayFormat === 'string' ? data.displayFormat : DEFAULTS.displayFormat,
     buttons,
-    presets: (Array.isArray(data?.presets) ? data.presets : []).filter(preset => preset && typeof preset.name === 'string' && preset.name.trim() && ['file', 'today', 'separator'].includes(preset.button?.type)).map(preset => ({
+    presets: (Array.isArray(data?.presets) ? data.presets : []).filter(preset => preset && typeof preset.name === 'string' && preset.name.trim() && ['file', 'today', 'separator', 'template'].includes(preset.button?.type)).map(preset => ({
       id: loadButton({id: preset.id}, usedIds).id,
       name: preset.name.trim(),
       button: loadButton(preset.button, usedIds, preset.button.type),
@@ -473,6 +490,66 @@ class OptionSuggest extends AbstractInputSuggest {
   }
 }
 
+function folderOptions(app) {
+  return ['/', ...app.vault.getAllFolders().map(folder => folder.path).filter(path => path !== '/')];
+}
+class TemplateModal extends Modal {
+  constructor(plugin, button) {
+    super(plugin.app);
+    this.plugin = plugin;
+    this.button = button;
+    this.closed = false;
+    this.submitting = false;
+  }
+  onOpen() {
+    this.setTitle(t('创建文件'));
+    this.contentEl.createEl('p', {text: t('选择文件夹并输入文件名，模板内容将原样复制。')});
+    const form = this.contentEl.createEl('form');
+    const fields = form.createDiv({cls: 'ctz-today-sidebar__create-fields'});
+    const folderLabel = fields.createEl('label', {cls: 'ctz-today-sidebar__create-folder'});
+    folderLabel.createSpan({text: t('文件夹')});
+    this.folderInput = folderLabel.createEl('input', {attr: {type: 'text', 'aria-label': t('文件夹'), placeholder: t('库根目录')}});
+    this.folderInput.value = this.button.targetFolder;
+    this.suggester = new OptionSuggest(this.app, this.folderInput, () => folderOptions(this.app), value => { this.folderInput.value = value; });
+    const nameLabel = fields.createEl('label', {cls: 'ctz-today-sidebar__create-name'});
+    nameLabel.createSpan({text: t('文件名')});
+    const nameGroup = nameLabel.createSpan({cls: 'ctz-today-sidebar__create-name-input'});
+    this.nameInput = nameGroup.createEl('input', {attr: {type: 'text', 'aria-label': t('文件名'), required: '', autocomplete: 'off'}});
+    nameGroup.createSpan({text: '.md', cls: 'ctz-today-sidebar__create-extension'});
+    this.errorEl = form.createDiv({cls: 'ctz-today-sidebar__create-error', attr: {role: 'alert'}});
+    const actions = form.createDiv({cls: 'modal-button-container'});
+    const cancel = actions.createEl('button', {text: t('取消'), attr: {type: 'button'}});
+    cancel.addEventListener('click', () => this.close());
+    this.submitButton = actions.createEl('button', {text: t('创建'), cls: 'mod-cta', attr: {type: 'submit'}});
+    form.addEventListener('submit', event => { event.preventDefault(); void this.submit(); });
+    this.nameInput.focus();
+  }
+  async submit() {
+    if (this.submitting || this.closed || this.plugin.disposed) return;
+    this.submitting = true;
+    this.submitButton.disabled = true;
+    this.errorEl.textContent = '';
+    try {
+      const file = await this.plugin.createFromTemplate(this.button.id, this.folderInput.value, this.nameInput.value, () => this.closed);
+      if (!file) return;
+      this.close();
+      try { await this.plugin.openTarget(file); }
+      catch (error) { new Notice(t('文件已创建，但无法打开：{error}', {error: error.message})); }
+    } catch (error) {
+      if (!this.closed) this.errorEl.textContent = t('无法创建文件：{error}', {error: error.message});
+    } finally {
+      this.submitting = false;
+      this.submitButton.disabled = false;
+    }
+  }
+  onClose() {
+    this.closed = true;
+    this.suggester?.close();
+    if (this.plugin.templateModal === this) this.plugin.templateModal = null;
+    this.contentEl.empty();
+  }
+}
+
 function createNavigationRow(parent, custom = false) {
   const row = parent.createEl('button', {cls: 'ctz-today-sidebar__row' + (custom ? ' ctz-today-sidebar__custom-row' : ''), attr: {type: 'button'}});
   const icon = row.createSpan({cls: 'ctz-today-sidebar__icon', attr: {'aria-hidden': 'true'}});
@@ -578,17 +655,17 @@ class TodayView extends ItemView {
       this.row = this.todayIcon = this.todayLabel = this.dateLabel = null;
     }
     for (const [id, controls] of this.customRows) {
-      if (!this.plugin.settings.buttons.some(button => button.id === id && button.type === 'file')) {
+      if (!this.plugin.settings.buttons.some(button => button.id === id && ['file', 'template'].includes(button.type))) {
         controls.row.remove();
         this.customRows.delete(id);
       }
     }
-    for (const button of this.plugin.settings.buttons.filter(item => item.type === 'file')) {
+    for (const button of this.plugin.settings.buttons.filter(item => ['file', 'template'].includes(item.type))) {
       let controls = this.customRows.get(button.id);
       if (!controls) {
         controls = createNavigationRow(this.nav, true);
         this.customRows.set(button.id, controls);
-        controls.row.addEventListener('click', () => { void this.plugin.openCustom(button.id); });
+        controls.row.addEventListener('click', () => { if (button.type === 'template') this.plugin.openTemplate(button.id); else void this.plugin.openCustom(button.id); });
       }
       let info;
       try { info = customInfo(button, this.plugin.app.vault); }
@@ -604,7 +681,7 @@ class TodayView extends ItemView {
       controls.subtitle.hidden = !subtitle;
       controls.row.disabled = !info.path;
       controls.row.title = info.error || info.file?.path || info.path || t("请先在插件设置中填写文件地址");
-      const customActive = view instanceof FileView && view.file instanceof TFile && info.file && view.file.path === info.file.path;
+      const customActive = button.type === 'file' && view instanceof FileView && view.file instanceof TFile && info.file && view.file.path === info.file.path;
       if (customActive) controls.row.setAttribute('aria-current', 'page');
       else controls.row.removeAttribute('aria-current');
     }
@@ -864,7 +941,7 @@ class TodaySettings extends PluginSettingTab {
       const handle = entry.createEl('button', {cls: 'clickable-icon ctz-today-sidebar__drag-handle', attr: {type: 'button', tabindex: '-1'}});
       setIcon(handle, 'grip-vertical');
       this.dragHandles.set(button.id, handle);
-      const controls = button.type === 'separator' ? createSeparatorPreview(entry, button.separatorStyle) : createNavigationRow(entry, button.type === 'file');
+      const controls = button.type === 'separator' ? createSeparatorPreview(entry, button.separatorStyle) : createNavigationRow(entry, button.type !== 'today');
       const {row} = controls;
       controls.dragLabel = handle.createSpan({cls: 'ctz-today-sidebar__drag-label'});
       row.setAttribute('aria-pressed', String(!preset && button.id === selected.id));
@@ -895,7 +972,7 @@ class TodaySettings extends PluginSettingTab {
       this.plugin.taskCounter.beginRender();
       if (this.taskModeSetting) {
         const todayMode = selected?.type === 'today';
-        this.taskModeSetting.setDesc(selected?.subtitleMode === 'none' ? (todayMode ? t("隐藏副标题，日期格式会保留。") : t("不显示副标题，原有文本会保留。")) : selected?.subtitleMode === 'tasks' ? this.plugin.taskCounter.description + t(" 无任务显示 0，无法统计显示 —，等待缓存显示 …。") : selected?.subtitleMode === 'filename' ? t("显示目标文件名（不含 .md）。") : selected?.subtitleMode === 'frontmatter' ? t("显示指定 frontmatter 属性的值；属性缺失或为空时隐藏。") : todayMode ? t("显示按日期格式生成的日期；可改为当天日记的未完成任务数。") : t("可改为目标 Markdown 文件的未完成任务数；使用当前库 Tasks 状态配置，未配置时使用标准任务状态。"));
+        this.taskModeSetting.setDesc(selected?.subtitleMode === 'none' ? (todayMode ? t("隐藏副标题，日期格式会保留。") : t("不显示副标题，原有文本会保留。")) : selected?.subtitleMode === 'tasks' ? this.plugin.taskCounter.description + t(" 无任务显示 0，无法统计显示 —，等待缓存显示 …。") : selected?.subtitleMode === 'filename' ? t("显示目标文件名（不含 .md）。") : selected?.subtitleMode === 'frontmatter' ? t("显示指定 frontmatter 属性的值；属性缺失或为空时隐藏。") : todayMode ? t("显示按日期格式生成的日期；可改为当天日记的未完成任务数。") : selected?.type === 'template' ? t("普通文本，留空隐藏；选择其他模式时保留此文本，切回后恢复。") : t("可改为目标 Markdown 文件的未完成任务数；使用当前库 Tasks 状态配置，未配置时使用标准任务状态。"));
       }
       for (const button of this.plugin.settings.buttons) {
         const controls = listControls.get(button.id);
@@ -986,6 +1063,7 @@ class TodaySettings extends PluginSettingTab {
       if (this.plugin.disposed) return;
       const menu = new Menu();
       menu.addItem(item => item.setTitle(t('File 类型')).setIcon('file').onClick(() => add('file')));
+      menu.addItem(item => item.setTitle(t('创建文件')).setIcon('circle-plus').onClick(() => add('template')));
       menu.addItem(item => item.setTitle(t("分隔条目")).setIcon('minus').onClick(() => add('separator')));
       if (this.plugin.settings.presets.length) {
         menu.addSeparator();
@@ -1018,7 +1096,7 @@ class TodaySettings extends PluginSettingTab {
           if (item.button.type === 'today') {
             try { info = entryInfo(this.plugin, item.button, item); subtitle = this.plugin.entrySubtitle(item.button, info, item); }
             catch { subtitle = ''; }
-          } else if (item.button.type === 'file') {
+          } else if (['file', 'template'].includes(item.button.type)) {
             try { info = customInfo(item.button, this.app.vault); subtitle = this.plugin.fileSubtitle(item.button, info); }
             catch { subtitle = item.button.subtitleMode === 'text' ? item.button.customSubtitle : ''; }
           }
@@ -1036,7 +1114,7 @@ class TodaySettings extends PluginSettingTab {
       setIcon(handle, 'grip-vertical');
       presetDragLabels.set(item.id, handle.createSpan({text: t('dragItem', {title: item.name}), cls: 'ctz-today-sidebar__drag-label'}));
       this.presetDragHandles.set(item.id, handle);
-      const controls = item.button.type === 'separator' ? createSeparatorPreview(entry, item.button.separatorStyle) : createNavigationRow(entry, item.button.type === 'file');
+      const controls = item.button.type === 'separator' ? createSeparatorPreview(entry, item.button.separatorStyle) : createNavigationRow(entry, item.button.type !== 'today');
       presetControls.set(item.id, controls);
       const row = controls.row;
       row.setAttribute('aria-pressed', String(item === preset));
@@ -1081,7 +1159,7 @@ class TodaySettings extends PluginSettingTab {
       this.refreshIconControls();
       return;
     }
-    new Setting(editor).setName(t("类型")).setDesc(selected.type === 'today' ? t("Today · 打开当天日记") : t("File · 打开指定文件"));
+    new Setting(editor).setName(t("类型")).setDesc(selected.type === 'today' ? t("Today · 打开当天日记") : selected.type === 'template' ? t('模板 · 复制指定文件创建新笔记') : t("File · 打开指定文件"));
     const propertyValues = [];
     const updatePropertyValues = () => {
       let info = {};
@@ -1179,7 +1257,7 @@ class TodaySettings extends PluginSettingTab {
     }
     sectionHeading(t("副标题"));
     // Today reuses the text mode for its date, so the same three choices replace the old fixed date.
-    const subtitleModeOptions = selected.type === 'today' ? {none: t("不显示"), text: t("日期"), tasks: t("未完成任务数")} : {none: t("不显示"), text: t("普通文本"), tasks: t("未完成任务数"), filename: t("文件名"), frontmatter: t("frontmatter 属性")};
+    const subtitleModeOptions = selected.type === 'template' ? {none: t('不显示'), text: t('普通文本')} : selected.type === 'today' ? {none: t("不显示"), text: t("日期"), tasks: t("未完成任务数")} : {none: t("不显示"), text: t("普通文本"), tasks: t("未完成任务数"), filename: t("文件名"), frontmatter: t("frontmatter 属性")};
     this.taskModeSetting = new Setting(editor).setName(t("副标题显示")).addDropdown(dropdown => dropdown.addOptions(subtitleModeOptions).setValue(selected.subtitleMode).onChange(value => {
       if (!Object.hasOwn(subtitleModeOptions, value)) return;
       return update('subtitleMode', value);
@@ -1212,15 +1290,23 @@ class TodaySettings extends PluginSettingTab {
         editor.insertBefore(pathSetting.settingEl, titleHeading);
       }
     } else {
-      const addressSetting = new Setting(editor).setName(t("文件地址")).setDesc(t("搜索库内文件或输入相对路径；省略扩展名时尝试补 .md。"));
+      const addressSetting = new Setting(editor).setName(t(selected.type === 'template' ? "模板文件" : "文件地址")).setDesc(t("搜索库内文件或输入相对路径；省略扩展名时尝试补 .md。"));
       addressSetting.settingEl.addClass('ctz-today-sidebar__file-address');
       editor.insertBefore(addressSetting.settingEl, titleHeading);
       addressSetting.addText(text => {
           text.setValue(selected.customPath).onChange(value => update('customPath', value));
-          this.suggesters.push(new OptionSuggest(this.app, text.inputEl, () => this.app.vault.getFiles().map(file => file.path), value => update('customPath', value)));
+          this.suggesters.push(new OptionSuggest(this.app, text.inputEl, () => this.app.vault.getFiles().filter(file => selected.type !== 'template' || file.extension === 'md').map(file => file.path), value => update('customPath', value)));
         });
     }
-    new Setting(editor).setName(t("图标显示")).setDesc(t("完成度饼图按已完成任务占未完成与已完成任务总数的比例绘制环形，取消任务不计入；无任务或无法统计时回退普通图标，关闭后恢复保存的图标。"))
+    if (selected.type === 'template') {
+      const folderSetting = new Setting(editor).setName(t('默认文件夹')).setDesc(t('请选择已有文件夹，留空表示库根目录。'));
+      editor.insertBefore(folderSetting.settingEl, titleHeading);
+      folderSetting.addText(text => {
+        text.setValue(selected.targetFolder).setPlaceholder(t('库根目录')).onChange(value => update('targetFolder', value));
+        this.suggesters.push(new OptionSuggest(this.app, text.inputEl, () => folderOptions(this.app), value => update('targetFolder', value)));
+      });
+    }
+    if (selected.type !== 'template') new Setting(editor).setName(t("图标显示")).setDesc(t("完成度饼图按已完成任务占未完成与已完成任务总数的比例绘制环形，取消任务不计入；无任务或无法统计时回退普通图标，关闭后恢复保存的图标。"))
       .addDropdown(dropdown => dropdown.addOptions({icon: t("普通图标"), tasks: t("完成度饼图")}).setValue(selected.iconMode).onChange(value => {
         if (!['icon', 'tasks'].includes(value)) return;
         return update('iconMode', value);
@@ -1407,6 +1493,31 @@ class TodaySidebarPlugin extends Plugin {
     } catch (error) { new Notice(t("无法打开今日日记：{error}", {error: error.message})); }
     finally { this.opening = false; }
   }
+  openTemplate(id) {
+    if (this.disposed || this.templateModal) return;
+    const button = this.settings.buttons.find(item => item.id === id && item.type === 'template');
+    if (!button) return;
+    this.templateModal = new TemplateModal(this, button);
+    this.templateModal.open();
+  }
+  async createFromTemplate(id, folderValue, nameValue, cancelled = () => false) {
+    if (this.disposed || cancelled()) return null;
+    const button = this.settings.buttons.find(item => item.id === id && item.type === 'template');
+    const source = button ? customInfo(button, this.app.vault).file : null;
+    if (!(source instanceof TFile) || source.extension !== 'md') throw new Error(t('模板必须是已有的 Markdown 文件。'));
+    const folder = folderValue.trim() === '/' ? '' : folderValue.trim();
+    validateRelativePath(folder, t('文件夹'), true);
+    if (folder && !(this.app.vault.getAbstractFileByPath(folder) instanceof TFolder)) throw new Error(t('请选择已有文件夹，留空表示库根目录。'));
+    const name = nameValue.trim().replace(/\.md$/i, '');
+    validateRelativePath(name, t('文件名'));
+    if (name.includes('/')) throw new Error(t('文件名不能包含文件夹路径。'));
+    const path = normalizePath((folder ? folder + '/' : '') + name + '.md');
+    if (this.app.vault.getAbstractFileByPath(path)) throw new Error(t('文件已存在：{path}', {path}));
+    const content = await this.app.vault.read(source);
+    if (this.disposed || cancelled()) return null;
+    // Vault.create refuses existing paths, including files created while read was pending.
+    return this.app.vault.create(path, content);
+  }
   async openCustom(id = this.settings.buttons.find(button => button.type === 'file')?.id) {
     if (this.opening || this.disposed) return;
     this.opening = true;
@@ -1420,7 +1531,7 @@ class TodaySidebarPlugin extends Plugin {
     } catch (error) { new Notice(t("无法打开自定义文件：{error}", {error: error.message})); }
     finally { this.opening = false; }
   }
-  onunload() { this.disposed = true; this.settingsTab?.hide(); }
+  onunload() { this.disposed = true; this.templateModal?.close(); this.settingsTab?.hide(); }
 }
 module.exports = TodaySidebarPlugin;
-module.exports.testing = {COPY, t, uiLanguage,titleOverflows,taskStatusTypes, countUnfinishedTasks, countTaskStats, progressLabel, drawEntryIcon, frontmatterValue, fileBaseName, propertyOptions, dailyPath, displayDate, customInfo, customIconsApi, iconId, drawIcon, availableIconIds, matchOptions, OptionSuggest, loadSettings, VIEW_TYPE, DEFAULTS, TodayView, TodaySettings};
+module.exports.testing = {TemplateModal, folderOptions, COPY, t, uiLanguage,titleOverflows,taskStatusTypes, countUnfinishedTasks, countTaskStats, progressLabel, drawEntryIcon, frontmatterValue, fileBaseName, propertyOptions, dailyPath, displayDate, customInfo, customIconsApi, iconId, drawIcon, availableIconIds, matchOptions, OptionSuggest, loadSettings, VIEW_TYPE, DEFAULTS, TodayView, TodaySettings};

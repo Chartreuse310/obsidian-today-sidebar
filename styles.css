@@ -427,3 +427,33 @@
 .ctz-today-sidebar__short-title-warning[hidden] {
   display: none;
 }
+
+.ctz-today-sidebar__create-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--size-4-3, 12px);
+}
+.ctz-today-sidebar__create-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2, 8px);
+  min-width: 0;
+}
+.ctz-today-sidebar__create-fields input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.ctz-today-sidebar__create-name-input {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1, 4px);
+}
+.ctz-today-sidebar__create-extension {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.ctz-today-sidebar__create-error {
+  color: var(--text-error);
+  margin-top: var(--size-4-2, 8px);
+}
