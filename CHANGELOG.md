@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.2 — 2026-10-28
+
+- Fix package builds when the system temporary directory and output directory are on different filesystems, including CI environments that return EXDEV for renames.
+
 ## 0.25.1 — 2026-10-28
 
 - Rename the template creation action to Create file.
